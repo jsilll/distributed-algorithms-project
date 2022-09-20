@@ -1,12 +1,13 @@
 #pragma once
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #include <stdio.h>
 
-void hello();
+    void hello();
 
 #ifdef __cplusplus
 }
