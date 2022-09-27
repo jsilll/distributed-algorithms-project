@@ -3,7 +3,6 @@
 #include <signal.h>
 #include <thread>
 
-#include "hello.h"
 #include "parser.hpp"
 #include "logger.hpp"
 
@@ -19,6 +18,7 @@ int main(int argc, char *argv[])
   // Setting up Signal Handling
   signal(SIGINT, stop_execution);
   signal(SIGTERM, stop_execution);
+  std::cout << "From a new terminal type `kill -SIGINT " << getpid() << "' or 'kill -SIGTERM " << getpid() << "' to stop processing packets.\n\n";
 
   // Constructing Parser
   bool require_config = true;
@@ -83,7 +83,6 @@ static void display_host_info(Parser &parser)
 {
   std::cout << "My ID: " << parser.id() << "\n";
   std::cout << "My PID: " << getpid() << "\n";
-  std::cout << "From a new terminal type `kill -SIGINT " << getpid() << "' or 'kill -SIGTERM " << getpid() << "' to stop processing packets.\n\n";
 }
 
 /**

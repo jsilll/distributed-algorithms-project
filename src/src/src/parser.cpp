@@ -200,7 +200,6 @@ unsigned long Parser::receiver_id() const
 Parser::Host Parser::localhost() const
 {
     CheckParsed();
-
     if (id_ > hosts_.size())
     {
         std::ostringstream os;
