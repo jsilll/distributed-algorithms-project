@@ -33,14 +33,13 @@ int main(int argc, char *argv[])
   // Constructing Logger
   LOGGER.open(parser.output_path());
 
-  std::cout << "Doing some initialization..." << std::endl;
+  std::cout << "Doing some initializations...\n\n";
+  Parser::Host localhost = parser.localhost();
   unsigned long n_messages = parser.n_messages();
   unsigned long receiver_id = parser.receiver_id();
-  std::cout << "n_messages = " << n_messages << " receiver_id = " << receiver_id << std::endl;
-  Parser::Host host = parser.localhost();
-
+  std::cout << "id = " << localhost.id << "; ip = " << localhost.ip_readable() << "; port = " << localhost.port_readable() << std::endl;
+  std::cout << "n_messages = " << n_messages << "; receiver_id = " << receiver_id << "\n\n";
   std::cout << "Broadcasting and delivering messages..." << std::endl;
-  // TODO:
 
   // After a process finishes broadcasting, it waits forever for the delivery of messages.
   while (true)

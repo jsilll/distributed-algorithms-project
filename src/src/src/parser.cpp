@@ -200,7 +200,15 @@ unsigned long Parser::receiver_id() const
 Parser::Host Parser::localhost() const
 {
     CheckParsed();
-    return hosts_[0];
+
+    if (id_ > hosts_.size())
+    {
+        std::ostringstream os;
+        os << "id `" << id_ << "` does not exist.";
+        throw std::invalid_argument(os.str());
+    }
+
+    return hosts_[id_ - 1];
 }
 
 void Parser::CheckParsed() const
