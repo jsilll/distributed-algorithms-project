@@ -1,10 +1,10 @@
 #include <chrono>
 #include <iostream>
-#include <signal.h>
 #include <thread>
 
-#include "hello.h"
 #include "parser.hpp"
+#include "hello.h"
+#include <signal.h>
 
 static void stop(int)
 {
@@ -22,8 +22,19 @@ static void stop(int)
   exit(0);
 }
 
-static void printDebugInfo(Parser &parser)
+int main(int argc, char **argv)
 {
+  signal(SIGTERM, stop);
+  signal(SIGINT, stop);
+
+  // `true` means that a config file is required.
+  // Call with `false` if no config file is necessary.
+  bool requireConfig = true;
+
+  Parser parser(argc, argv);
+  parser.parse();
+
+  hello();
   std::cout << std::endl;
 
   std::cout << "My PID: " << getpid() << "\n";
@@ -34,8 +45,8 @@ static void printDebugInfo(Parser &parser)
 
   std::cout << "List of resolved hosts is:\n";
   std::cout << "==========================\n";
-
-  for (auto &host : parser.hosts())
+  auto hosts = parser.hosts();
+  for (auto &host : hosts)
   {
     std::cout << host.id << "\n";
     std::cout << "Human-readable IP: " << host.ipReadable() << "\n";
@@ -44,7 +55,6 @@ static void printDebugInfo(Parser &parser)
     std::cout << "Machine-readbale Port: " << host.port << "\n";
     std::cout << "\n";
   }
-
   std::cout << "\n";
 
   std::cout << "Path to output:\n";
@@ -58,22 +68,6 @@ static void printDebugInfo(Parser &parser)
   std::cout << "Doing some initialization...\n\n";
 
   std::cout << "Broadcasting and delivering messages...\n\n";
-}
-
-int main(int argc, char **argv)
-{
-  signal(SIGTERM, stop);
-  signal(SIGINT, stop);
-
-  // `true` means that a config file is required.
-  // Call with `false` if no config file is necessary.
-  bool requireConfig = true;
-  Parser parser(argc, argv, requireConfig);
-  parser.parse();
-
-  hello();
-
-  printDebugInfo(parser);
 
   // After a process finishes broadcasting,
   // it waits forever for the delivery of messages.
