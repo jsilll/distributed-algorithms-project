@@ -5,6 +5,7 @@
 
 #include "parser.hpp"
 #include "logger.hpp"
+#include "udp_server.hpp"
 
 static void stop_execution(int);
 static void display_host_info(Parser &);
@@ -33,15 +34,20 @@ int main(int argc, char *argv[])
   // Constructing Logger
   LOGGER.open(parser.output_path());
 
+  // Some Initializations
   std::cout << "Doing some initializations...\n\n";
   Parser::Host localhost = parser.localhost();
   unsigned long n_messages = parser.n_messages();
   unsigned long receiver_id = parser.receiver_id();
   std::cout << "id = " << localhost.id << "; ip = " << localhost.ip_readable() << "; port = " << localhost.port_readable() << std::endl;
   std::cout << "n_messages = " << n_messages << "; receiver_id = " << receiver_id << "\n\n";
+
+  // Broadcasting and Receiving Messages
   std::cout << "Broadcasting and delivering messages..." << std::endl;
+  UDPserver server(localhost.ip, localhost.port);
 
   // After a process finishes broadcasting, it waits forever for the delivery of messages.
+
   while (true)
   {
     std::this_thread::sleep_for(std::chrono::hours(1));

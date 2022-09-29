@@ -1,7 +1,16 @@
 # DO NAME THE SYMBOLIC VARIABLE `SOURCES`
 
 include_directories(include)
-set(SOURCES src/main.cpp src/parser.cpp src/logger.cpp)
+set(SOURCES 
+src/main.cpp 
+src/parser.cpp 
+src/logger.cpp
+src/perfect_link.cpp
+src/receiver.cpp
+src/sender.cpp
+src/threaded_list.cpp
+src/threaded_queue.cpp
+)
 
 # DO NOT EDIT THE FOLLOWING LINE
 find_package(Threads)

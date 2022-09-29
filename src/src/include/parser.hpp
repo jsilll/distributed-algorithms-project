@@ -16,6 +16,8 @@ public:
     unsigned long id;
     unsigned short port;
 
+    // -- Getters --
+
     std::string ip_readable() const;
     unsigned short port_readable() const;
 
@@ -29,6 +31,8 @@ public:
 
   void Parse();
 
+  // -- Getters --
+
   bool requires_config() const;
   std::string config_path() const;
   std::string hosts_path() const;
@@ -37,7 +41,6 @@ public:
   unsigned long id() const;
   unsigned long n_messages() const;
   unsigned long receiver_id() const;
-
   Host localhost() const;
 
 private:
