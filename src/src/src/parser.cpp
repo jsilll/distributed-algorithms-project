@@ -155,6 +155,7 @@ bool Parser::requires_config() const
 std::string Parser::config_path() const
 {
     CheckParsed();
+
     if (!requires_config_)
     {
         throw std::runtime_error("Parser is configured to ignore the config path");
@@ -212,6 +213,11 @@ Parser::Host Parser::localhost() const
     return hosts_[id_ - 1];
 }
 
+Parser::ExecMode Parser::exec_mode() const
+{
+    return exec_mode_;
+}
+
 void Parser::CheckParsed() const
 {
     if (!parsed_)
@@ -222,18 +228,17 @@ void Parser::CheckParsed() const
 
 void Parser::Help(const int, char const *const *argv) const
 {
-    auto configStr = "CONFIG";
-    std::cerr << "Usage: " << argv[0] << " --id ID --hosts HOSTS --output OUTPUT";
+    std::string program_name(argv[0]);
     if (!requires_config_)
     {
-        std::cerr << "\n";
+        std::string msg = "Usage: " + program_name + " --id ID --hosts HOSTS --output OUTPUT";
+        throw std::runtime_error(msg);
     }
     else
     {
-        std::cerr << " CONFIG\n";
+        std::string msg = "Usage: " + program_name + " --id ID --hosts HOSTS --output OUTPUT CONFIG";
+        throw std::runtime_error(msg);
     }
-
-    std::exit(EXIT_FAILURE);
 }
 
 bool Parser::ParseInternal()
@@ -257,6 +262,8 @@ bool Parser::ParseInternal()
     {
         return false;
     }
+
+    ParseMode();
 
     return true;
 }
@@ -290,6 +297,22 @@ bool Parser::ParseId()
     }
 
     return false;
+}
+
+void Parser::ParseMode()
+{
+    if (argc_ < 10)
+    {
+        return;
+    }
+
+    if (std::strcmp(argv_[8], "--mode") == 0)
+    {
+        if (std::strcmp(argv_[9], "pl") == 0)
+        {
+            exec_mode_ = kPerfectLinks;
+        }
+    }
 }
 
 bool Parser::ParseHostPath()
@@ -406,9 +429,9 @@ void Parser::ParseHostsFile()
 
 void Parser::ParseConfigFile()
 {
-    std::ifstream configFile(config_path());
+    std::ifstream config_file(config_path());
 
-    if (!configFile.is_open())
+    if (!config_file.is_open())
     {
         std::ostringstream os;
         os << "`" << config_path() << "` does not exist.";
@@ -416,19 +439,27 @@ void Parser::ParseConfigFile()
     }
 
     std::string line;
-    std::getline(configFile, line);
+    std::getline(config_file, line);
     std::istringstream iss(line);
-    Trim(line);
 
+    Trim(line);
     if (line.empty())
     {
-        return;
+        throw std::runtime_error("Config file is empty.");
     }
 
-    if (!(iss >> n_messages_ >> receiver_id_))
+    switch (exec_mode_)
     {
-        std::ostringstream os;
-        os << "Parsing for `" << config_path() << "` failed at line 1";
-        throw std::invalid_argument(os.str());
+    case kPerfectLinks:
+        if (!(iss >> n_messages_ >> receiver_id_))
+        {
+            std::ostringstream os;
+            os << "Parsing for `" << config_path() << "` failed at line 1";
+            throw std::invalid_argument(os.str());
+        }
+        break;
+
+    default:
+        throw std::runtime_error("Invalid execution mode.");
     }
 }

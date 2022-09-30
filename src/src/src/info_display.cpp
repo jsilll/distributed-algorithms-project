@@ -6,6 +6,9 @@ void display_host_info(Parser &parser)
 {
     std::cout << "My ID: " << parser.id() << "\n";
     std::cout << "My PID: " << getpid() << "\n";
+    std::cout << "From a new terminal type `kill -SIGINT "
+              << getpid() << "' or 'kill -SIGTERM "
+              << getpid() << "' to stop processing packets.\n\n";
 }
 
 void display_hosts_info(Parser &parser)
