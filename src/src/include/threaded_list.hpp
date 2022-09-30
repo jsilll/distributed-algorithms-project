@@ -1,10 +1,11 @@
 #pragma once
 
+#include <algorithm>
 #include <atomic>
 #include <iostream>
-#include <vector>
 #include <mutex>
 #include <string>
+#include <vector>
 
 template <typename T>
 class ThreadsafeList

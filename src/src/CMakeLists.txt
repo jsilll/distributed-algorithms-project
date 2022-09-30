@@ -9,7 +9,6 @@ src/parser.cpp
 src/perfect_link.cpp
 src/receiver.cpp
 src/sender.cpp
-src/threaded_queue.cpp
 src/udp_client.cpp
 src/udp_server.cpp
 )

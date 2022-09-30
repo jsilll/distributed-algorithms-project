@@ -19,8 +19,6 @@ private:
 public:
     Receiver(in_addr_t ip, unsigned short port, int process_id);
 
-    ssize_t Receive(char *buffer) override;
-
     // ---------- Getters ---------- //
 
     int process_id() const;

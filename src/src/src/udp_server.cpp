@@ -12,52 +12,41 @@
 #define MAX_LENGTH 512
 
 UDPserver::UDPserver(in_addr_t ip, unsigned short port)
+    : sockfd_(socket(AF_INET, SOCK_DGRAM, 0))
 {
-
-    // Create socket
-    socketDescriptor = socket(AF_INET, SOCK_DGRAM, 0);
-
-    if (socketDescriptor < 0)
+    if (sockfd_ < 0)
     {
-        std::cerr << "Cannot create socket" << std::endl;
-        exit(0);
+        throw std::runtime_error("Cannot create socket.");
     }
 
-    // Bind socket
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = ip;
-    server_addr.sin_port = port;
-    memset(server_addr.sin_zero, '\0', sizeof(server_addr.sin_zero));
+    server_addr_.sin_port = port;
+    server_addr_.sin_family = AF_INET;
+    server_addr_.sin_addr.s_addr = ip;
+    memset(server_addr_.sin_zero, '\0', sizeof(server_addr_.sin_zero));
 
-    if (bind(socketDescriptor, reinterpret_cast<const struct sockaddr *>(&server_addr), sizeof(server_addr)) < 0)
+    if (bind(sockfd_, reinterpret_cast<const struct sockaddr *>(&server_addr_), sizeof(server_addr_)) < 0)
     {
-        std::cout << " Could bind to socket" << std::endl;
+        throw std::runtime_error("Could bind to socket.");
     }
 }
 
 UDPserver::~UDPserver()
 {
-    close(socketDescriptor);
+    close(sockfd_);
 }
 
-ssize_t UDPserver::Receive(char *buffer)
+std::string UDPserver::Receive()
 {
-
-    struct sockaddr_in client_addr;
+    char buffer[MAX_LENGTH];
     socklen_t client_addr_len;
+    struct sockaddr_in client_addr;
 
-    char receive_buffer[MAX_LENGTH];
-
-    ssize_t res_rec = recvfrom(socketDescriptor, receive_buffer, sizeof(receive_buffer), 0, reinterpret_cast<struct sockaddr *>(&client_addr), &client_addr_len);
+    ssize_t res_rec = recvfrom(sockfd_, buffer, sizeof(buffer), 0, reinterpret_cast<struct sockaddr *>(&client_addr), &client_addr_len);
 
     if (res_rec < 0)
     {
-        std::cerr << "Error receiving message" << std::endl;
-    }
-    else
-    {
-        strncpy(buffer, receive_buffer, sizeof(buffer) - 1);
+        std::runtime_error("Error receiving message.");
     }
 
-    return res_rec;
+    return std::string(buffer);
 }

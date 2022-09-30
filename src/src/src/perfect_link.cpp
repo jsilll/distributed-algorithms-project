@@ -69,11 +69,9 @@ void PerfectLink::Deliver()
         if (link_active_)
         {
 
-            char buffer[MAX_LENGTH];
-
-            if (!(this->receiver_.Receive(buffer) < 0))
+            std::string message_received = receiver_.Receive();
+            if (message_received.size())
             {
-                std::string message_received(buffer);
                 std::string ack = message_received.substr(0, 1);
                 int msg_process_id = stoi(message_received.substr(1, 3));
                 int msg_target_id = stoi(message_received.substr(4, 3));
@@ -138,8 +136,6 @@ void PerfectLink::Deliver()
                     }
                 }
             }
-
-            // std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     }
 }

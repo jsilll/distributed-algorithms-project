@@ -6,14 +6,38 @@
 #include <queue>
 #include <string>
 
+template <typename T>
 class ThreadsafeQueue
 {
-public:
-    unsigned long size() const;
-    std::optional<std::string> pop();
-    void push(const std::string &item);
-
 private:
     mutable std::mutex mutex_;
-    std::queue<std::string> queue_;
+    std::queue<T> queue_;
+
+public:
+    std::optional<T> Pop()
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (queue_.empty())
+        {
+            return std::nullopt;
+        }
+
+        std::string tmp = queue_.front();
+        queue_.pop();
+        return tmp;
+    }
+
+    void Push(const T &item)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        queue_.push(item);
+    }
+
+    // ---------- Getters ---------- //
+
+    unsigned long size() const
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return queue_.size();
+    }
 };
