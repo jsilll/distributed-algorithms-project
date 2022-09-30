@@ -14,6 +14,6 @@ public:
     void push(const std::string &item);
 
 private:
-    std::mutex mutex_;
+    mutable std::mutex mutex_;
     std::queue<std::string> queue_;
 };

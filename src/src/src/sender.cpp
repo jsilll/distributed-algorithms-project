@@ -3,15 +3,15 @@
 #include <string>
 
 Sender::Sender(sockaddr_in target_addr, int target_id)
-    : UDPclient::UDPclient(target_addr), target_id(target_id), msg_to_send(""), can_send(false)
+    : UDPclient::UDPclient(target_addr), target_id_(target_id), msg_to_send_(""), can_send_(false)
 {
 }
 
-ssize_t Sender::send()
+ssize_t Sender::Send()
 {
-    if (msg_to_send != "")
+    if (msg_to_send_ != "")
     {
-        return UDPclient::send(msg_to_send.c_str());
+        return UDPclient::send(msg_to_send_.c_str());
     }
     else
     {
@@ -19,27 +19,27 @@ ssize_t Sender::send()
     }
 }
 
-ssize_t Sender::sendMessage(const std::string &msg)
+ssize_t Sender::SendMessage(const std::string &msg)
 {
     return UDPclient::send(msg.c_str());
 }
 
-int Sender::getTargetId() const
+int Sender::target_id() const
 {
-    return target_id;
+    return target_id_;
 }
 
-void Sender::setMessageToSend(const std::string &msg)
+void Sender::msg_to_send(const std::string &msg)
 {
-    msg_to_send = msg;
+    msg_to_send_ = msg;
 }
 
-std::string Sender::getMessageToSend() const
+std::string Sender::msg_to_send() const
 {
-    return msg_to_send;
+    return msg_to_send_;
 }
 
-void Sender::setCanSend(bool bool_)
+void Sender::can_send(bool bool_)
 {
-    can_send = bool_;
+    can_send_ = bool_;
 }

@@ -17,6 +17,8 @@
 #include <cstdlib>
 #include <cstring>
 
+// ---------- Helper Methods ---------- //
+
 inline void LeftTrim(std::string &s)
 {
     s.erase(s.begin(), std::find_if(s.begin(), s.end(),

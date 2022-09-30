@@ -10,11 +10,12 @@ class Parser
 public:
   struct Host
   {
-    Host(size_t id, std::string &ip_or_hostname, unsigned short port);
 
     in_addr_t ip;
     unsigned long id;
     unsigned short port;
+
+    Host(size_t id, std::string &ip_or_hostname, unsigned short port);
 
     // -- Getters --
 
@@ -25,6 +26,22 @@ public:
     in_addr_t IpLookup(const char *host);
     bool IsValidAddress(const char *ipAddress);
   };
+
+private:
+  const int argc_;
+  char const *const *argv_;
+  bool requires_config_;
+  bool parsed_;
+
+  std::string config_path_;
+  std::string hosts_path_;
+  std::string output_path_;
+
+  std::vector<Host> hosts_;
+
+  unsigned long id_;
+  unsigned long n_messages_;
+  unsigned long receiver_id_;
 
 public:
   Parser(const int argc, char const *const *argv, bool requires_config = true);
@@ -55,20 +72,4 @@ private:
   bool ParseConfigPath();
   void ParseHostsFile();
   void ParseConfigFile();
-
-private:
-  const int argc_;
-  char const *const *argv_;
-  bool requires_config_;
-  bool parsed_;
-
-  std::string config_path_;
-  std::string hosts_path_;
-  std::string output_path_;
-
-  std::vector<Host> hosts_;
-
-  unsigned long id_;
-  unsigned long n_messages_;
-  unsigned long receiver_id_;
 };

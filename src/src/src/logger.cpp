@@ -2,28 +2,20 @@
 
 Logger::Logger(const std::string &fname)
 {
-    file.open(fname);
+    file_.open(fname);
 }
 
-Logger::~Logger()
+void Logger::Open(const std::string &fname)
 {
-    if (file.is_open())
+    if (file_.is_open())
     {
-        file.close();
-    }
-}
-
-void Logger::open(const std::string &fname)
-{
-    if (file.is_open())
-    {
-        file.close();
+        file_.close();
     }
 
-    file.open(fname);
+    file_.open(fname);
 }
 
-void Logger::flush()
+void Logger::Flush()
 {
-    file << std::flush;
+    file_ << std::flush;
 }

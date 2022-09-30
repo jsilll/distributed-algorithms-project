@@ -1,20 +1,42 @@
 #pragma once
 
-#include <iostream>
-#include <mutex>
-#include <list>
-#include <string>
 #include <atomic>
+#include <iostream>
+#include <vector>
+#include <mutex>
+#include <string>
 
+template <typename T>
 class ThreadsafeList
 {
-public:
-    unsigned long size() const;
-    std::atomic<bool> contains(const std::string &item) const;
-    void push_back(const std::string &item);
-    std::list<std::string> getList() const;
-
 private:
-    std::mutex mutex_;
-    std::list<std::string> list_;
+    mutable std::mutex mutex_;
+    std::vector<T> vector_;
+
+public:
+    void PushBack(const T &item)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        vector_.push_back(item);
+    }
+
+    std::atomic<bool> Contains(const T &item) const
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return (std::find(vector_.begin(), vector_.end(), item) != vector_.end());
+    };
+
+    // ---------- Getters ---------- //
+
+    unsigned long size() const
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return vector_.size();
+    }
+
+    std::vector<T> vector() const
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return vector_;
+    };
 };

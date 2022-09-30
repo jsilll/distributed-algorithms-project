@@ -1,29 +1,36 @@
 #pragma once
 
-#include <list>
-#include <string>
 #include <atomic>
+#include <string>
+#include <vector>
 
-#include "udp_server.hpp"
 #include "threaded_list.hpp"
+#include "udp_server.hpp"
 
 class Receiver : public UDPserver
 {
 private:
-    int process_id;
-    std::atomic<bool> can_receive;
+    int process_id_;
+    std::atomic<bool> can_receive_;
 
-    ThreadsafeList process_delivered;
-    ThreadsafeList process_log;
+    ThreadsafeList<std::string> process_log_;
+    ThreadsafeList<std::string> process_delivered_;
 
 public:
     Receiver(in_addr_t ip, unsigned short port, int process_id);
-    ssize_t receive(char *buffer) override;
-    int getProcessId() const;
-    void setCanReceive(bool bool_);
-    void addMessageDelivered(const std::string &msg);
-    bool hasDelivered(const std::string &msg) const;
-    std::list<std::string> getMessagesDelivered() const;
-    void addMessageLog(const std::string &msg);
-    std::list<std::string> getMessageLog() const;
+
+    ssize_t Receive(char *buffer) override;
+
+    // ---------- Getters ---------- //
+
+    int process_id() const;
+    std::vector<std::string> delivered() const;
+    std::vector<std::string> message_log() const;
+    bool has_delivered(const std::string &msg) const;
+
+    // ---------- Setters ---------- //
+
+    void can_receive(bool bool_);
+    void add_message_log(const std::string &msg);
+    void add_messaged_delivered(const std::string &msg);
 };

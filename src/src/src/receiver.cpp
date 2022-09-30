@@ -1,20 +1,19 @@
 #include "receiver.hpp"
 
 #include <algorithm>
-#include <list>
 #include <string>
+#include <vector>
 
 Receiver::Receiver(in_addr_t ip, unsigned short port, int process_id)
-    : UDPserver::UDPserver(ip, port), process_id(process_id), can_receive(true)
+    : UDPserver::UDPserver(ip, port), process_id_(process_id), can_receive_(true)
 {
 }
 
-ssize_t Receiver::receive(char *buffer)
+ssize_t Receiver::Receive(char *buffer)
 {
-
-    if (can_receive)
+    if (can_receive_)
     {
-        return UDPserver::receive(buffer);
+        return UDPserver::Receive(buffer);
     }
     else
     {
@@ -22,57 +21,60 @@ ssize_t Receiver::receive(char *buffer)
     }
 }
 
-int Receiver::getProcessId() const
+// ---------- Getters ---------- //
+
+int Receiver::process_id() const
 {
-    return process_id;
+    return process_id_;
 }
 
-void Receiver::setCanReceive(bool bool_)
-{
-    can_receive = bool_;
-}
-
-void Receiver::addMessageDelivered(const std::string &msg)
-{
-    process_delivered.push_back(msg);
-}
-
-bool Receiver::hasDelivered(const std::string &msg) const
-{
-    return process_delivered.contains(msg);
-}
-
-std::list<std::string> Receiver::getMessagesDelivered() const
+void Receiver::add_message_log(const std::string &msg)
 {
 
-    if (!can_receive)
+    if (!process_log_.Contains(msg))
     {
-        return process_delivered.getList();
+        process_log_.PushBack(msg);
+    }
+}
+
+void Receiver::add_messaged_delivered(const std::string &msg)
+{
+    process_delivered_.PushBack(msg);
+}
+
+// ---------- Setters ---------- //
+
+void Receiver::can_receive(bool bool_)
+{
+    can_receive_ = bool_;
+}
+
+std::vector<std::string> Receiver::delivered() const
+{
+
+    if (!can_receive_)
+    {
+        return process_delivered_.vector();
     }
     else
     {
-        return std::list<std::string>();
+        return std::vector<std::string>();
     }
 }
 
-void Receiver::addMessageLog(const std::string &msg)
+std::vector<std::string> Receiver::message_log() const
 {
-
-    if (!process_log.contains(msg))
+    if (!can_receive_)
     {
-        process_log.push_back(msg);
-    }
-}
-
-std::list<std::string> Receiver::getMessageLog() const
-{
-
-    if (!can_receive)
-    {
-        return process_log.getList();
+        return process_log_.vector();
     }
     else
     {
-        return std::list<std::string>();
+        return {};
     }
+}
+
+bool Receiver::has_delivered(const std::string &msg) const
+{
+    return process_delivered_.Contains(msg);
 }

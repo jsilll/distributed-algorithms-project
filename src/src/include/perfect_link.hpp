@@ -7,55 +7,57 @@
 #include <thread>
 #include <vector>
 
-#include "broadcast.hpp"
 #include "receiver.hpp"
 #include "sender.hpp"
 #include "threaded_list.hpp"
-#include "threaded_queue.hpp"
 
-class Perfectlink
+class Broadcast;
+class PerfectLink;
+
+class PerfectLink
 {
 private:
-    Receiver *receiver;
-    Sender *sender;
-    Broadcast *broadcast;
+    int target_id_;
+    int this_process_id_;
 
-    std::vector<Perfectlink *> other_links;
+    Broadcast &broadcast_;
+    std::atomic<bool> link_active_{};
 
-    int target_id;
-    int this_process_id;
+    Sender &sender_;
+    Receiver &receiver_;
+    std::vector<PerfectLink *> other_links_;
 
-    std::atomic<bool> link_active;
+    std::thread ack_thread_;
+    std::thread send_thread_;
+    std::thread deliver_thread_;
 
-    std::thread deliver_thread;
-    std::thread send_thread;
-    std::thread ack_thread;
+    std::mutex link_mutex_;
+    std::mutex receiver_mutex_;
+    std::mutex broadcast_mutex_;
+    std::mutex acks_to_send_mutex_;
+    std::mutex messages_to_send_mutex_;
 
-    std::mutex receiver_mutex;
-    std::mutex messages_to_send_mutex;
-    std::mutex acks_to_send_mutex;
-    std::mutex link_mutex;
-    std::mutex broadcast_mutex;
+    std::list<std::string> acks_to_send_;
+    std::list<std::string> messages_to_send_;
 
-    std::list<std::string> messages_to_send;
-    std::list<std::string> acks_to_send;
-
-    ThreadsafeList link_delivered;
+    ThreadsafeList<std::string> link_delivered_;
 
 public:
-    Perfectlink(Receiver *receiver, Sender *sender, Broadcast *broadcast);
-    ~Perfectlink();
+    PerfectLink(Sender &sender, Receiver &receiver, Broadcast &broadcast);
 
-    void addMessage(const std::string &msg);
-    void addMessages(const std::list<std::string> &msgs);
-    void addOtherLinks(std::vector<Perfectlink *> other_links);
-    void setLinkActive();
-    void setLinkInactive();
-    void sendNewMessage(const std::string &msg);
-    void sendThreaded();
-    void deliverThreaded();
-    void ackThreaded();
-    void addAck(const std::string &ack);
-    void removeMessage(const std::string &msg);
-    void addMessageRelay(const std::string &msg);
+    void Ack();
+    void Send();
+    void Deliver();
+
+    void SendMessage(const std::string &msg);
+    void AddMessageRelay(const std::string &msg);
+
+    // ---------- Setters ---------- //
+
+    void active(bool active);
+    void add_ack(const std::string &ack);
+    void add_message(const std::string &msg);
+    void remove_message(const std::string &msg);
+    void add_messages(const std::list<std::string> &msgs);
+    void add_links(std::vector<PerfectLink *> other_links);
 };

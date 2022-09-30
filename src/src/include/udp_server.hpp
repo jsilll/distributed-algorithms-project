@@ -14,5 +14,5 @@ private:
 public:
     UDPserver(in_addr_t ip, unsigned short port);
     virtual ~UDPserver();
-    virtual ssize_t receive(char *buffer);
+    virtual ssize_t Receive(char *buffer);
 };

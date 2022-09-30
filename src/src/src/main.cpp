@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
   display_exec_args_info(parser);
 
   // Constructing Logger
-  LOGGER.open(parser.output_path());
+  LOGGER.Open(parser.output_path());
 
   // Some Initializations
   std::cout << "Doing some initializations...\n\n";
@@ -47,7 +47,6 @@ int main(int argc, char *argv[])
   UDPserver server(localhost.ip, localhost.port);
 
   // After a process finishes broadcasting, it waits forever for the delivery of messages.
-
   while (true)
   {
     std::this_thread::sleep_for(std::chrono::hours(1));
@@ -74,7 +73,7 @@ static void stop_execution(int signum)
 
   // Write/Flush Output File If Necessary
   std::cout << "Writing output." << std::endl;
-  LOGGER.flush();
+  LOGGER.Flush();
 
   // Exiting
   std::exit(EXIT_SUCCESS);
