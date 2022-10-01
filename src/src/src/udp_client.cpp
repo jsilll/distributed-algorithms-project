@@ -1,17 +1,18 @@
 #include "udp_client.hpp"
 
-#include <iostream>
 #include <arpa/inet.h>
+#include <cstring>
 #include <netdb.h>
+#include <stdexcept>
+#include <string>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <string>
 
-#define MAX_LENGTH 512
+#include "udp_server.hpp"
 
-UDPclient::UDPclient(sockaddr_in target_addr)
-    : sockfd_(socket(AF_INET, SOCK_DGRAM, 0)), target_addr_(target_addr)
+UDPClient::UDPClient()
+    : sockfd_(socket(AF_INET, SOCK_DGRAM, 0))
 {
     if (sockfd_ < 0)
     {
@@ -19,14 +20,25 @@ UDPclient::UDPclient(sockaddr_in target_addr)
     }
 }
 
-UDPclient::~UDPclient()
+UDPClient::UDPClient(UDPServer &server)
+    : sockfd_(server.sockfd())
+{
+    if (sockfd_ < 0)
+    {
+        std::invalid_argument("Invalid socket.");
+    }
+}
+
+UDPClient::~UDPClient()
 {
     close(sockfd_);
 }
 
-ssize_t UDPclient::Send(const std::string &msg)
+ssize_t UDPClient::Send(const std::string &msg, sockaddr_in to_addr)
 {
-    ssize_t res = sendto(sockfd_, msg.c_str(), MAX_LENGTH, 0, reinterpret_cast<struct sockaddr *>(&target_addr_), sizeof(target_addr_));
+
+    const static int MAX_SENDTO_LEN = 1024;
+    ssize_t res = sendto(sockfd_, msg.c_str(), MAX_SENDTO_LEN, 0, reinterpret_cast<struct sockaddr *>(&to_addr), sizeof(to_addr));
 
     if (res < 0)
     {
@@ -36,14 +48,12 @@ ssize_t UDPclient::Send(const std::string &msg)
     return res;
 }
 
-ssize_t UDPclient::Send(const std::string &msg, sockaddr_in to_addr)
+sockaddr_in UDPClient::Address(in_addr_t ip, in_port_t port)
 {
-    ssize_t res = sendto(sockfd_, msg.c_str(), MAX_LENGTH, 0, reinterpret_cast<struct sockaddr *>(&to_addr), sizeof(to_addr));
-
-    if (res < 0)
-    {
-        throw std::runtime_error("Error sending message.");
-    }
-
-    return res;
+    sockaddr_in address;
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = ip;
+    address.sin_port = port;
+    bzero(address.sin_zero, sizeof(address.sin_zero));
+    return address;
 }

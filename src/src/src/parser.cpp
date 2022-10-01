@@ -312,6 +312,10 @@ void Parser::ParseMode()
         {
             exec_mode_ = kPerfectLinks;
         }
+        else
+        {
+            throw std::runtime_error("Invalid execution mode provided.");
+        }
     }
 }
 

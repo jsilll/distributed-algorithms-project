@@ -7,7 +7,7 @@
 #include <string>
 
 template <typename T>
-class ThreadsafeQueue
+class ThreadedQueue
 {
 private:
     mutable std::mutex mutex_;

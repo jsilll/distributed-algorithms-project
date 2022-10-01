@@ -3,14 +3,11 @@
 include_directories(include)
 set(SOURCES 
 src/main.cpp 
-src/broadcast.cpp
 src/drivers.cpp
 src/info_display.cpp
 src/logger.cpp
 src/parser.cpp 
 src/perfect_link.cpp
-src/receiver.cpp
-src/sender.cpp
 src/udp_client.cpp
 src/udp_server.cpp
 )

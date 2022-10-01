@@ -3,26 +3,55 @@
 #include <iostream>
 
 #include "udp_server.hpp"
+#include "udp_client.hpp"
+#include "perfect_link.hpp"
 
-void perfect_links_driver(unsigned long n_messages, unsigned long receiver_id, Parser::Host localhost)
+void perfect_links_driver(const unsigned long int id, const unsigned long int target_id, const unsigned long n_messages, const std::vector<Parser::Host> &hosts, Logger &logger)
 {
-    std::cout << "PerfectLinks Mode activated." << std::endl;
-    std::cout << "Doing some initializations...\n\n";
-    std::cout << "n_messages = " << n_messages << "\n";
-    std::cout << "receiver_id = " << receiver_id << "\n";
-    std::cout << "Broadcasting and delivering messages..." << std::endl;
+    Parser::Host localhost = hosts[id - 1];
+    Parser::Host target_host = hosts[target_id - 1];
 
-    try
+    std::cout << "[INFO] === PerfectLinks Mode Activated ===\n";
+    std::cout << "[INFO] n_messages = " << n_messages << "\n";
+    std::cout << "[INFO] target_id = " << target_host.id << "\n";
+    std::cout << "[INFO] id = " << localhost.id << "\n";
+    std::cout << "[INFO] ip = " << localhost.ip_readable() << "\n";
+    std::cout << "[INFO] port = " << localhost.port_readable() << std::endl;
+
+    UDPServer server(localhost.ip, localhost.port);
+    UDPClient client(server);
+
+    if (id != target_id)
     {
-        std::cout << "id = " << localhost.id << "\n";
-        std::cout << "ip = " << localhost.ip_readable() << "\n";
-        std::cout << "port = " << localhost.port_readable() << std::endl;
+        std::cout << "[INFO] Sending Messages ..." << std::endl;
 
-        UDPserver server(localhost.ip, localhost.port);
+        PerfectLink pl(id, target_host.id, target_host.ip, target_host.port, server, client, logger);
+
+        for (unsigned long i = 0; i < n_messages; ++i)
+        {
+            pl.Send(std::to_string(i));
+        }
+
+        // while (true)
+        // {
+        //     std::this_thread::sleep_for(std::chrono::hours(1));
+        // }
     }
-    catch (const std::exception &e)
+    else
     {
-        std::cerr << e.what() << '\n';
-        exit(EXIT_FAILURE);
+        std::cout << "[INFO] Receiving Messages ..." << std::endl;
+        std::vector<std::unique_ptr<PerfectLink>> pls;
+        for (auto &peer : hosts)
+        {
+            if (id != peer.id)
+            {
+                pls.push_back(std::make_unique<PerfectLink>(id, peer.id, peer.ip, peer.port, server, client, logger));
+            }
+        }
+
+        // while (true)
+        // {
+        //     std::this_thread::sleep_for(std::chrono::hours(1));
+        // }
     }
 }

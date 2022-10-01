@@ -8,7 +8,7 @@
 #include <vector>
 
 template <typename T>
-class ThreadsafeList
+class ThreadedList
 {
 private:
     mutable std::mutex mutex_;

@@ -9,44 +9,65 @@
 #include <unistd.h>
 #include <cstring>
 
-#define MAX_LENGTH 512
+#include "udp_client.hpp"
 
-UDPserver::UDPserver(in_addr_t ip, unsigned short port)
-    : sockfd_(socket(AF_INET, SOCK_DGRAM, 0))
+UDPServer::UDPServer(in_addr_t ip, in_port_t port)
+    : sockfd_(socket(AF_INET, SOCK_DGRAM, 0)),
+      server_addr_(UDPClient::Address(ip, port)),
+      receive_thread_(std::thread(&UDPServer::Receive, this))
 {
     if (sockfd_ < 0)
     {
         throw std::runtime_error("Cannot create socket.");
     }
 
-    server_addr_.sin_port = port;
-    server_addr_.sin_family = AF_INET;
-    server_addr_.sin_addr.s_addr = ip;
-    memset(server_addr_.sin_zero, '\0', sizeof(server_addr_.sin_zero));
-
     if (bind(sockfd_, reinterpret_cast<const struct sockaddr *>(&server_addr_), sizeof(server_addr_)) < 0)
     {
-        throw std::runtime_error("Could bind to socket.");
+        std::cout << " Could bind to socket" << std::endl;
     }
 }
 
-UDPserver::~UDPserver()
+UDPServer::~UDPServer()
 {
     close(sockfd_);
+    active_.store(false);
+    receive_thread_.join();
 }
 
-std::string UDPserver::Receive()
+void UDPServer::Receive()
 {
-    char buffer[MAX_LENGTH];
-    socklen_t client_addr_len;
-    struct sockaddr_in client_addr;
-
-    ssize_t res_rec = recvfrom(sockfd_, buffer, sizeof(buffer), 0, reinterpret_cast<struct sockaddr *>(&client_addr), &client_addr_len);
-
-    if (res_rec < 0)
+    while (active_.load())
     {
-        std::runtime_error("Error receiving message.");
-    }
+        static const int MAX_RECV_LEN = 1024;
+        static char buffer[MAX_RECV_LEN];
 
-    return std::string(buffer);
+        sockaddr_in from;
+        socklen_t len = sizeof(from);
+        ssize_t bytes = recvfrom(sockfd_, buffer, sizeof(buffer), 0, reinterpret_cast<sockaddr *>(&from), &len);
+
+        if (bytes < 0)
+        {
+            std::runtime_error("Error receiving message.");
+        }
+
+        Notify(Observer::Message{bytes, from, std::string(buffer)});
+    }
+}
+
+void UDPServer::Attach(Observer *obs, sockaddr_in addr)
+{
+    observers_[Machine{addr.sin_addr.s_addr, addr.sin_port}].push_back(obs);
+}
+
+void UDPServer::Notify(Observer::Message msg)
+{
+    for (auto const &obs : observers_[Machine{msg.addr.sin_addr.s_addr, msg.addr.sin_port}])
+    {
+        obs->Deliver(msg);
+    }
+}
+
+int UDPServer::sockfd() const
+{
+    return sockfd_;
 }

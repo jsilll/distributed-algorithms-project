@@ -6,58 +6,59 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <set>
 
-#include "receiver.hpp"
-#include "sender.hpp"
+#include "udp_server.hpp"
+#include "udp_client.hpp"
+#include "logger.hpp"
 #include "threaded_list.hpp"
 
 class Broadcast;
 class PerfectLink;
 
-class PerfectLink
+class PerfectLink : public UDPServer::Observer
 {
 private:
-    int target_id_;
-    int this_process_id_;
+    unsigned long int id_;
+    const unsigned long int target_id_;
 
-    Broadcast &broadcast_;
-    std::atomic<bool> link_active_{};
+    sockaddr_in target_addr_;
 
-    Sender &sender_;
-    Receiver &receiver_;
-    std::vector<PerfectLink *> other_links_;
+    UDPClient &client_;
+    UDPServer &server_;
 
     std::thread ack_thread_;
     std::thread send_thread_;
     std::thread deliver_thread_;
 
-    std::mutex link_mutex_;
-    std::mutex receiver_mutex_;
-    std::mutex broadcast_mutex_;
-    std::mutex acks_to_send_mutex_;
-    std::mutex messages_to_send_mutex_;
+    std::mutex acks_to_send_mutex_{};
+    std::set<std::string> acks_to_send_{};
 
-    std::list<std::string> acks_to_send_;
-    std::list<std::string> messages_to_send_;
+    std::mutex messages_to_send_mutex_{};
+    std::vector<std::string> messages_to_send_{};
 
-    ThreadsafeList<std::string> link_delivered_;
+    std::mutex delivered_mutex_{};
+    std::vector<std::string> delivered_{};
+
+    Logger &logger_;
+
+    std::atomic<bool> active_{true};
 
 public:
-    PerfectLink(Sender &sender, Receiver &receiver, Broadcast &broadcast);
+    PerfectLink(unsigned long int id_,
+                const unsigned long int target_id_,
+                in_addr_t receiver_ip,
+                unsigned short receiver_port,
+                UDPServer &server,
+                UDPClient &client,
+                Logger &logger);
 
+    ~PerfectLink();
+
+    void Send(const std::string &msg);
+
+private:
     void Ack();
-    void Send();
-    void Deliver();
-
-    void SendMessage(const std::string &msg);
-    void AddMessageRelay(const std::string &msg);
-
-    // ---------- Setters ---------- //
-
-    void active(bool active);
-    void add_ack(const std::string &ack);
-    void add_message(const std::string &msg);
-    void remove_message(const std::string &msg);
-    void add_messages(const std::list<std::string> &msgs);
-    void add_links(std::vector<PerfectLink *> other_links);
+    void SendAll();
+    void Deliver(UDPServer::Observer::Message msg) override;
 };

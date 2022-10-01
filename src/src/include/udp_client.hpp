@@ -6,16 +6,21 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-class UDPclient
+class UDPServer;
+
+class UDPClient
 {
 private:
     int sockfd_;
-    sockaddr_in target_addr_;
 
 public:
-    UDPclient(sockaddr_in target_addr);
-    virtual ~UDPclient();
+    UDPClient();
 
-    ssize_t Send(const std::string &msg);
+    UDPClient(UDPServer &server);
+
+    ~UDPClient();
+
     ssize_t Send(const std::string &msg, sockaddr_in to_addr);
+
+    static sockaddr_in Address(in_addr_t ip, unsigned short port);
 };
