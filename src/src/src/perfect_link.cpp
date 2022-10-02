@@ -182,14 +182,15 @@ void PerfectLink::Deliver(const std::string &msg)
         acks_to_send_mutex_.unlock();
 
         messages_delivered_mutex_.lock();
+        if (messages_delivered_.find(message.id) == messages_delivered_.end())
+        {
+            std::cout << "[ LOG] Received Message " << message.id << " From Process " << target_id_ << ": '" << message.payload << "'\n";
+            std::stringstream ss;
+            ss << "d " << target_id_ << " " << message.id;
+            logger_ << ss.str();
+        }
         messages_delivered_[message.id] = std::time(nullptr);
         messages_delivered_mutex_.unlock();
-
-        std::cout << "[ LOG] Received Message " << message.id << " From Process " << target_id_ << ": '" << message.payload << "'\n";
-
-        std::stringstream ss;
-        ss << "d " << target_id_ << " " << message.id;
-        logger_ << ss.str();
     }
     else // Received an Ack
     {
