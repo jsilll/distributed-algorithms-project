@@ -32,6 +32,11 @@ void PerfectLink::Send(const std::string &msg)
     messages_to_send_mutex_.unlock();
 }
 
+void PerfectLink::debug(bool debug)
+{
+    debug_.store(debug);
+}
+
 void PerfectLink::SendAcks()
 {
     while (!stop_.load())
@@ -51,13 +56,17 @@ void PerfectLink::SendAcks()
             if (std::snprintf(buffer, sizeof(buffer), "ACK %010lu", ack.id) <= 0)
             {
                 // TODO: how to handle this exception?
+                acks_to_send_mutex_.unlock_shared();
                 throw std::runtime_error("Error during formatting.");
             }
 
             try
             {
                 client_.Send(std::string(buffer), target_addr_);
-                std::cout << "[INFO] Sending Ack " << ack.id << " To Process " << target_id_ << "\n";
+                if (debug_.load())
+                {
+                    std::cout << "[INFO] Sending Ack " << ack.id << " To Process " << target_id_ << "\n";
+                }
             }
             catch (const std::exception &e)
             {
@@ -66,9 +75,39 @@ void PerfectLink::SendAcks()
         }
 
         acks_to_send_mutex_.unlock_shared();
+
+        CleanAcks();
+
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 }
+
+void PerfectLink::CleanAcks()
+{
+    static const double timeout = 0.5; // 0.5 seconds timeout to stop sending ack's
+
+    std::vector<Message::message_id_t> acks_to_remove;
+
+    messages_delivered_mutex_.lock_shared();
+    time_t now = std::time(nullptr);
+    for (auto const &msg : messages_delivered_)
+    {
+        auto delta = std::difftime(now, msg.second);
+        if (delta >= timeout)
+        {
+            acks_to_remove.push_back(msg.first);
+        }
+    }
+    messages_delivered_mutex_.unlock_shared();
+
+    acks_to_send_mutex_.lock();
+    for (auto const &ack_id : acks_to_remove)
+    {
+        acks_to_send_.erase({ack_id});
+    }
+    acks_to_send_mutex_.unlock();
+}
+
 void PerfectLink::SendMessages()
 {
     while (!stop_.load())
@@ -88,24 +127,26 @@ void PerfectLink::SendMessages()
             if (std::snprintf(buffer, sizeof(buffer), "MSG %010lu PAYLOAD %s", msg.id, msg.payload.c_str()) <= 0)
             {
                 // TODO: how to handle this exception?
+                messages_to_send_mutex_.unlock_shared();
                 throw std::runtime_error("Error during formatting.");
             }
 
             try
             {
                 client_.Send(std::string(buffer), target_addr_);
-                std::cout << "[INFO] Sending Message " << msg.id << " To Process " << target_id_ << ": '" << msg.payload << "'\n";
-                // TODO: logger << ...
-                // DOUBT: should we only log once we know the message has been delivered
+                if (debug_.load())
+                {
+                    std::cout << "[INFO] Sending Message " << msg.id << " To Process " << target_id_ << ": '" << msg.payload << "'\n";
+                }
             }
             catch (const std::exception &e)
             {
-                // somehow not remove this message (change std::vector -> std::set)
                 std::cerr << e.what() << '\n';
             }
         }
 
         messages_to_send_mutex_.unlock_shared();
+
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 }
@@ -116,7 +157,11 @@ void PerfectLink::Deliver(const std::string &msg)
 
     if (!parsed_msg.has_value())
     {
-        std::cerr << "[INFO] Received Invalid Message: '" << msg << "'\n";
+        if (debug_.load())
+        {
+            std::cerr << "[INFO] Received Invalid Message: '" << msg << "'\n";
+        }
+
         return;
     }
 
@@ -124,30 +169,35 @@ void PerfectLink::Deliver(const std::string &msg)
     {
         Message message = std::get<0>(parsed_msg.value());
 
-        if (messages_delivered_.find(message) == messages_delivered_.end())
-        {
-            messages_delivered_.insert(message); // TODO: maybe we should only keep the id's, not the whole message
-            std::cout << "[ LOG] Received Message: '" << message.payload << "'\n";
-        }
+        acks_to_send_mutex_.lock();
+        acks_to_send_.insert({message.id});
+        acks_to_send_mutex_.unlock();
 
-        // TODO: (not here but related)
-        // Implement some timeout mechanism for removing acks when no longer receiving the message from peer
-        acks_to_send_.insert(Ack{message.id});
+        messages_delivered_mutex_.lock();
+        messages_delivered_[message.id] = std::time(nullptr);
+        messages_delivered_mutex_.unlock();
+
+        // TODO: logger << ...
+        std::cout << "[ LOG] Received Message " << message.id << " From Process " << target_id_ << ": '" << message.payload << "'\n";
     }
     else // Received an Ack
     {
         Ack ack = std::get<1>(parsed_msg.value());
-        std::cout << "[INFO] Received Ack: '" << ack.id << "'\n";
+
+        if (debug_.load())
+        {
+            std::cout << "[INFO] Received Ack: '" << ack.id << "'\n";
+        }
 
         messages_to_send_mutex_.lock();
-
         auto message = messages_to_send_.find(Message{ack.id, ""});
         if (message != messages_to_send_.end())
         {
+            // TODO: logger << ...
+            // DOUBT: should we log only when we received confirmation?
             std::cout << "[ LOG] Successfully Sent Message " << ack.id << " To Process " << target_id_ << ": '" << (*message).payload << "'" << std::endl;
-            messages_to_send_.erase(Message{ack.id, ""});
+            messages_to_send_.erase({ack.id, ""});
         }
-
         messages_to_send_mutex_.unlock();
     }
 }

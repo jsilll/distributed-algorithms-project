@@ -61,6 +61,8 @@ void drivers::PerfectLinks(const unsigned long int id, const unsigned long int t
             std::exit(EXIT_FAILURE);
         }
 
+        pl.value().debug(true);
+
         std::cout << "[INFO] Sending Messages ..." << std::endl;
 
         for (unsigned long i = 0; i < n_messages; ++i)
@@ -82,7 +84,9 @@ void drivers::PerfectLinks(const unsigned long int id, const unsigned long int t
             {
                 try
                 {
-                    pls.push_back(std::make_unique<PerfectLink>(id, peer.id, peer.ip, peer.port, server.value(), client.value(), logger));
+                    auto pl = std::make_unique<PerfectLink>(id, peer.id, peer.ip, peer.port, server.value(), client.value(), logger);
+                    pl->debug(true);
+                    pls.push_back(std::move(pl));
                 }
                 catch (const std::exception &e)
                 {
