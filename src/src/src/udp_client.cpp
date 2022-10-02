@@ -11,8 +11,8 @@
 
 #include "udp_server.hpp"
 
-UDPClient::UDPClient()
-    : sockfd_(socket(AF_INET, SOCK_DGRAM, 0))
+UDPClient::UDPClient(void)
+    : sockfd_(socket(AF_INET, SOCK_DGRAM, 0)), sock_owner_(true)
 {
     if (sockfd_ < 0)
     {
@@ -31,14 +31,15 @@ UDPClient::UDPClient(UDPServer &server)
 
 UDPClient::~UDPClient()
 {
-    close(sockfd_);
+    if (sock_owner_)
+    {
+        close(sockfd_);
+    }
 }
 
 ssize_t UDPClient::Send(const std::string &msg, sockaddr_in to_addr)
 {
-
-    const static int MAX_SENDTO_LEN = 1024;
-    ssize_t res = sendto(sockfd_, msg.c_str(), MAX_SENDTO_LEN, 0, reinterpret_cast<struct sockaddr *>(&to_addr), sizeof(to_addr));
+    ssize_t res = sendto(sockfd_, msg.c_str(), msg.size(), 0, reinterpret_cast<struct sockaddr *>(&to_addr), sizeof(to_addr));
 
     if (res < 0)
     {

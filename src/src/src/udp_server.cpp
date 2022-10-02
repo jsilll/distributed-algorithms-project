@@ -21,36 +21,33 @@ UDPServer::UDPServer(in_addr_t ip, in_port_t port)
         throw std::runtime_error("Cannot create socket.");
     }
 
-    if (bind(sockfd_, reinterpret_cast<const struct sockaddr *>(&server_addr_), sizeof(server_addr_)) < 0)
+    if (bind(sockfd_, reinterpret_cast<const sockaddr *>(&server_addr_), sizeof(server_addr_)) < 0)
     {
-        std::cout << " Could bind to socket" << std::endl;
+        throw std::runtime_error("Could not bind to socket.");
     }
 }
 
 UDPServer::~UDPServer()
 {
     close(sockfd_);
-    active_.store(false);
+    stop_.store(true);
     receive_thread_.join();
 }
 
 void UDPServer::Receive()
 {
-    while (active_.load())
+    while (!stop_.load())
     {
-        static const int MAX_RECV_LEN = 1024;
-        static char buffer[MAX_RECV_LEN];
+        static char buffer[MAX_MSG_SIZE];
 
-        sockaddr_in from;
-        socklen_t len = sizeof(from);
-        ssize_t bytes = recvfrom(sockfd_, buffer, sizeof(buffer), 0, reinterpret_cast<sockaddr *>(&from), &len);
-
-        if (bytes < 0)
+        sockaddr_in addr;
+        socklen_t len = sizeof(addr);
+        if (recvfrom(sockfd_, buffer, sizeof(buffer), MSG_WAITALL, reinterpret_cast<sockaddr *>(&addr), &len) < 0)
         {
             std::runtime_error("Error receiving message.");
         }
 
-        Notify(Observer::Message{bytes, from, std::string(buffer)});
+        Notify(std::string(buffer), addr);
     }
 }
 
@@ -59,9 +56,9 @@ void UDPServer::Attach(Observer *obs, sockaddr_in addr)
     observers_[Machine{addr.sin_addr.s_addr, addr.sin_port}].push_back(obs);
 }
 
-void UDPServer::Notify(Observer::Message msg)
+void UDPServer::Notify(std::string msg, sockaddr_in addr)
 {
-    for (auto const &obs : observers_[Machine{msg.addr.sin_addr.s_addr, msg.addr.sin_port}])
+    for (auto const &obs : observers_[Machine{addr.sin_addr.s_addr, addr.sin_port}])
     {
         obs->Deliver(msg);
     }

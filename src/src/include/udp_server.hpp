@@ -15,23 +15,14 @@ class UDPClient;
 
 class UDPServer
 {
-    friend class UDPClient;
-
 public:
     class Observer
     {
-        friend class UDPServer;
-
-    public:
-        struct Message
-        {
-            ssize_t bytes;
-            sockaddr_in addr;
-            std::string payload;
-        };
 
     private:
-        virtual void Deliver(Message msg) = 0;
+        virtual void Deliver(const std::string &msg) = 0;
+
+        friend class UDPServer;
     };
 
     struct Machine
@@ -40,12 +31,15 @@ public:
         in_port_t port;
     };
 
+public:
+    static const int MAX_MSG_SIZE = 1024;
+
 private:
     int sockfd_;
 
     sockaddr_in server_addr_;
     std::thread receive_thread_;
-    std::atomic<bool> active_{true};
+    std::atomic<bool> stop_{false};
     std::map<Machine, std::vector<Observer *>> observers_;
 
 public:
@@ -57,9 +51,11 @@ public:
 
     void Attach(Observer *obs, sockaddr_in addr);
 
-    void Notify(Observer::Message msg);
+    void Notify(std::string msg, sockaddr_in addr);
 
 private:
+    friend class UDPClient;
+
     int sockfd() const;
 };
 

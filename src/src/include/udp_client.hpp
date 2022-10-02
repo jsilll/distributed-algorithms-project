@@ -12,9 +12,10 @@ class UDPClient
 {
 private:
     int sockfd_;
+    bool sock_owner_{};
 
 public:
-    UDPClient();
+    UDPClient(void);
 
     UDPClient(UDPServer &server);
 

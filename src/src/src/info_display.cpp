@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-void display_host_info(Parser &parser)
+void info_display::Localhost(Parser &parser)
 {
     std::cout << "[INFO] My ID: " << parser.id() << "\n";
     std::cout << "[INFO] My PID: " << getpid() << "\n";
@@ -11,7 +11,7 @@ void display_host_info(Parser &parser)
               << getpid() << "' to stop processing packets.\n[INFO]\n";
 }
 
-void display_hosts_info(Parser &parser)
+void info_display::Hosts(Parser &parser)
 {
     std::cout << "[INFO] List of resolved hosts is:\n";
     std::cout << "[INFO] ==========================\n";
@@ -28,7 +28,7 @@ void display_hosts_info(Parser &parser)
     std::cout << "[INFO]\n";
 }
 
-void display_exec_args_info(Parser &parser)
+void info_display::ExecArgs(Parser &parser)
 {
     std::cout << "[INFO] Path to hosts:\n";
     std::cout << "[INFO] ===============\n";
