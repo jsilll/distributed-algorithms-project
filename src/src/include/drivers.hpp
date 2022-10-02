@@ -10,6 +10,11 @@ namespace drivers
      * the executing the perfect links algorithm
      *
      */
-    void PerfectLinks(unsigned long int id, unsigned long receiver_id, unsigned long n_messages, const std::vector<Parser::Host> &hosts, Logger &logger);
+    void PerfectLinks(unsigned long int id,
+                      unsigned long receiver_id,
+                      unsigned long n_messages,
+                      const std::vector<Parser::Host> &hosts,
+                      bool debug,
+                      Logger &logger);
 
 } // namespace drivers

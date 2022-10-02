@@ -71,7 +71,12 @@ int main(int argc, char *argv[])
   switch (parser.exec_mode())
   {
   case Parser::ExecMode::kPerfectLinks:
-    drivers::PerfectLinks(parser.id(), parser.receiver_id(), parser.n_messages(), parser.hosts(), logger);
+    drivers::PerfectLinks(parser.id(),
+                          parser.receiver_id(),
+                          parser.n_messages(),
+                          parser.hosts(),
+                          parser.debug(),
+                          logger);
     break;
   default:
     std::cerr << "Invalid execution mode." << std::endl;

@@ -218,6 +218,11 @@ Parser::ExecMode Parser::exec_mode() const
     return exec_mode_;
 }
 
+bool Parser::debug() const
+{
+    return debug_;
+}
+
 void Parser::CheckParsed() const
 {
     if (!parsed_)
@@ -264,6 +269,8 @@ bool Parser::ParseInternal()
     }
 
     ParseMode();
+
+    ParseDebug();
 
     return true;
 }
@@ -316,6 +323,19 @@ void Parser::ParseMode()
         {
             throw std::runtime_error("Invalid execution mode provided.");
         }
+    }
+}
+
+void Parser::ParseDebug()
+{
+    if (argc_ < 11)
+    {
+        return;
+    }
+
+    if (std::strcmp(argv_[10], "--debug") == 0)
+    {
+        debug_ = true;
     }
 }
 

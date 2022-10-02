@@ -21,7 +21,12 @@ static void wait_forever(void)
     }
 }
 
-void drivers::PerfectLinks(const unsigned long int id, const unsigned long int target_id, const unsigned long n_messages, const std::vector<Parser::Host> &hosts, Logger &logger)
+void drivers::PerfectLinks(const unsigned long int id,
+                           const unsigned long int target_id,
+                           const unsigned long n_messages,
+                           const std::vector<Parser::Host> &hosts,
+                           bool debug,
+                           Logger &logger)
 {
     Parser::Host localhost = hosts[id - 1];
     Parser::Host target_host = hosts[target_id - 1];
@@ -61,7 +66,7 @@ void drivers::PerfectLinks(const unsigned long int id, const unsigned long int t
                        server.value(),
                        client.value(),
                        logger,
-                       true);
+                       debug);
         }
         catch (const std::exception &e)
         {
@@ -97,7 +102,7 @@ void drivers::PerfectLinks(const unsigned long int id, const unsigned long int t
                                                                 server.value(),
                                                                 client.value(),
                                                                 logger,
-                                                                true));
+                                                                debug));
                 }
                 catch (const std::exception &e)
                 {
