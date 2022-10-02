@@ -4,6 +4,7 @@
 #include <list>
 #include <string>
 #include <thread>
+#include <sstream>
 
 #include <memory>
 #include <stdexcept>
@@ -184,8 +185,11 @@ void PerfectLink::Deliver(const std::string &msg)
         messages_delivered_[message.id] = std::time(nullptr);
         messages_delivered_mutex_.unlock();
 
-        // TODO: logger << ...
         std::cout << "[ LOG] Received Message " << message.id << " From Process " << target_id_ << ": '" << message.payload << "'\n";
+
+        std::stringstream ss;
+        ss << "d " << target_id_ << " " << message.id;
+        logger_ << ss.str();
     }
     else // Received an Ack
     {
@@ -200,9 +204,12 @@ void PerfectLink::Deliver(const std::string &msg)
         auto message = messages_to_send_.find(Message{ack.id, ""});
         if (message != messages_to_send_.end())
         {
-            // TODO: logger << ...
-            // DOUBT: should we log only when we received confirmation?
             std::cout << "[ LOG] Successfully Sent Message " << ack.id << " To Process " << target_id_ << ": '" << (*message).payload << "'" << std::endl;
+
+            std::stringstream ss;
+            ss << "b " << ack.id;
+            logger_ << ss.str();
+
             messages_to_send_.erase({ack.id, ""});
         }
         messages_to_send_mutex_.unlock();
