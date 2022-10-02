@@ -26,7 +26,8 @@ void drivers::PerfectLinks(const unsigned long int id, const unsigned long int t
     Parser::Host localhost = hosts[id - 1];
     Parser::Host target_host = hosts[target_id - 1];
 
-    std::cout << "[INFO] === PerfectLinks Mode Activated ===\n";
+    std::cout << "[INFO] PerfectLinks Mode Activated\n";
+    std::cout << "[INFO] ===========================\n";
     std::cout << "[INFO] n_messages = " << n_messages << "\n";
     std::cout << "[INFO] target_id = " << target_host.id << "\n";
     std::cout << "[INFO] id = " << localhost.id << "\n";
@@ -53,15 +54,20 @@ void drivers::PerfectLinks(const unsigned long int id, const unsigned long int t
 
         try
         {
-            pl.emplace(id, target_host.id, target_host.ip, target_host.port, server.value(), client.value(), logger);
+            pl.emplace(id,
+                       target_host.id,
+                       target_host.ip,
+                       target_host.port,
+                       server.value(),
+                       client.value(),
+                       logger,
+                       true);
         }
         catch (const std::exception &e)
         {
             std::cerr << e.what() << '\n';
             std::exit(EXIT_FAILURE);
         }
-
-        pl.value().debug(true);
 
         std::cout << "[INFO] Sending Messages ..." << std::endl;
 
@@ -84,9 +90,14 @@ void drivers::PerfectLinks(const unsigned long int id, const unsigned long int t
             {
                 try
                 {
-                    auto pl = std::make_unique<PerfectLink>(id, peer.id, peer.ip, peer.port, server.value(), client.value(), logger);
-                    pl->debug(true);
-                    pls.push_back(std::move(pl));
+                    pls.push_back(std::make_unique<PerfectLink>(id,
+                                                                peer.id,
+                                                                peer.ip,
+                                                                peer.port,
+                                                                server.value(),
+                                                                client.value(),
+                                                                logger,
+                                                                true));
                 }
                 catch (const std::exception &e)
                 {

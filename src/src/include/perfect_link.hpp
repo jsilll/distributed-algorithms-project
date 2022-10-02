@@ -64,11 +64,17 @@ private:
 
     Logger &logger_;
 
-    std::atomic<bool> stop_{false};
-    std::atomic<bool> debug_{false};
+    std::atomic<bool> debug_;
 
 public:
-    PerfectLink(unsigned long int id_, const unsigned long int target_id_, in_addr_t receiver_ip, unsigned short receiver_port, UDPServer &server, UDPClient &client, Logger &logger);
+    PerfectLink(unsigned long int id_,
+                const unsigned long int target_id_,
+                in_addr_t receiver_ip,
+                unsigned short receiver_port,
+                UDPServer &server,
+                UDPClient &client,
+                Logger &logger,
+                bool debug = false);
 
     ~PerfectLink();
 

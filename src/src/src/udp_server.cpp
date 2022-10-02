@@ -30,13 +30,12 @@ UDPServer::UDPServer(in_addr_t ip, in_port_t port)
 UDPServer::~UDPServer()
 {
     close(sockfd_);
-    stop_.store(true);
-    receive_thread_.join();
+    receive_thread_.detach();
 }
 
 void UDPServer::Receive()
 {
-    while (!stop_.load())
+    while (true)
     {
         static char buffer[MAX_MSG_SIZE];
 

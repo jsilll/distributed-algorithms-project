@@ -39,7 +39,6 @@ private:
 
     sockaddr_in server_addr_;
     std::thread receive_thread_;
-    std::atomic<bool> stop_{false};
     std::map<Machine, std::vector<Observer *>> observers_;
 
 public:

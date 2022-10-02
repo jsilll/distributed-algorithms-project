@@ -8,7 +8,14 @@
 #include <memory>
 #include <stdexcept>
 
-PerfectLink::PerfectLink(unsigned long int id, const unsigned long int target_id, in_addr_t target_ip, unsigned short target_pot, UDPServer &server, UDPClient &client, Logger &logger)
+PerfectLink::PerfectLink(unsigned long int id,
+                         const unsigned long int target_id,
+                         in_addr_t target_ip,
+                         unsigned short target_pot,
+                         UDPServer &server,
+                         UDPClient &client,
+                         Logger &logger,
+                         bool debug)
     : id_(id), target_id_(target_id), target_addr_(UDPClient::Address(target_ip, target_pot)),
       client_(client), server_(server),
       ack_thread_(std::thread(&PerfectLink::SendAcks, this)),
@@ -16,13 +23,13 @@ PerfectLink::PerfectLink(unsigned long int id, const unsigned long int target_id
       logger_(logger)
 {
     server_.Attach(this, target_addr_);
+    debug_.store(debug);
 }
 
 PerfectLink::~PerfectLink()
 {
-    stop_.store(true);
-    ack_thread_.join();
-    send_thread_.join();
+    ack_thread_.detach();
+    send_thread_.detach();
 }
 
 void PerfectLink::Send(const std::string &msg)
@@ -39,7 +46,7 @@ void PerfectLink::debug(bool debug)
 
 void PerfectLink::SendAcks()
 {
-    while (!stop_.load())
+    while (true)
     {
         acks_to_send_mutex_.lock_shared();
 
@@ -110,7 +117,7 @@ void PerfectLink::CleanAcks()
 
 void PerfectLink::SendMessages()
 {
-    while (!stop_.load())
+    while (true)
     {
         messages_to_send_mutex_.lock_shared();
 
