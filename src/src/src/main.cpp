@@ -25,9 +25,8 @@ static Logger logger;
  */
 static void stop_execution(int signum)
 {
-  signal(SIGTERM, SIG_DFL);
   signal(SIGINT, SIG_DFL);
-  signal(SIGSTOP, SIG_DFL);
+  signal(SIGTERM, SIG_DFL);
 
   std::cout << "\n[INFO] " << strsignal(signum) << " received." << std::endl;
   std::cout << "[INFO] Immediately stopping network packet processing." << std::endl;
@@ -42,7 +41,6 @@ int main(int argc, char *argv[])
 {
   signal(SIGINT, stop_execution);
   signal(SIGTERM, stop_execution);
-  signal(SIGSTOP, stop_execution);
 
   Parser parser(argc, argv, true);
 
