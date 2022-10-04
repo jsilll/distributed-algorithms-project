@@ -45,7 +45,7 @@ private:
     const unsigned long int target_id_;
     const sockaddr_in target_addr_;
 
-    std::atomic<Message::message_id_t> n_messages_{0};
+    std::atomic<Message::message_id_t> n_messages_{1};
 
     UDPClient &client_;
     UDPServer &server_;
