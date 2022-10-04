@@ -26,18 +26,50 @@ public:
     struct Message
     {
         typedef unsigned long int message_id_t;
+
         message_id_t id;
         std::string payload;
+
+        inline friend bool operator<(Message m1, Message m2)
+        {
+            return m1.id < m2.id;
+        }
     };
 
     struct Ack
     {
         Message::message_id_t id;
+
+        inline friend bool operator<(Ack ack1, Ack ack2)
+        {
+            return ack1.id < ack2.id;
+        }
     };
 
 private:
-    static const int kACK_SIZE = 14;
-    static const int kMIN_VALID_MSG_SIZE = 23;
+    template<typename T>
+    struct Shared 
+    {
+        T data{};
+        std::shared_mutex mutex{};
+    };
+
+private:
+    static constexpr int kAckSize = 14;
+    static constexpr int kMsgPrefixSize = 23;
+
+    static constexpr int kNoAcksToSendTimeoutMs = 1000;
+    static constexpr int kNoMsgsToSendTimeoutMs = 1000;
+
+    static constexpr int kFinishSendingAllAcksMs = 500;
+    static constexpr int kFinishSendingAllMsgsMs = 500;
+
+    /**
+     * @brief This value should be the result of:
+     * kFinishSendingAllAcksMs + Network Delay + Peer Processing Time
+     * 
+     */
+    static constexpr double kStopSendingAcksTimeoutSec = static_cast<double>(kFinishSendingAllAcksMs + 100 + 50) / 1000.0;
 
 private:
     const unsigned long int id_;
@@ -53,14 +85,9 @@ private:
     std::thread ack_thread_;
     std::thread send_thread_;
 
-    std::set<Message> messages_to_send_{};
-    std::shared_mutex messages_to_send_mutex_{};
-
-    std::set<Ack> acks_to_send_{};
-    std::shared_mutex acks_to_send_mutex_{};
-
-    std::map<Message::message_id_t, time_t> messages_delivered_{};
-    std::shared_mutex messages_delivered_mutex_{};
+    Shared<std::set<Ack>> acks_to_send_{};
+    Shared<std::set<Message>> messages_to_send_{};
+    Shared<std::map<Message::message_id_t, time_t>> messages_delivered_{};
 
     Logger &logger_;
 
@@ -81,18 +108,6 @@ private:
     void SendAcks();
     void CleanAcks();
     void SendMessages();
-
     void Deliver(const std::string &msg) override;
-
     std::optional<std::variant<Message, Ack>> Parse(std::string msg);
 };
-
-inline bool operator<(PerfectLink::Message m1, PerfectLink::Message m2)
-{
-    return m1.id < m2.id;
-}
-
-inline bool operator<(PerfectLink::Ack ack1, PerfectLink::Ack ack2)
-{
-    return ack1.id < ack2.id;
-}

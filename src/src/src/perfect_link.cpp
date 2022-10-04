@@ -38,9 +38,9 @@ void PerfectLink::Send(const std::string &msg)
 {
     Message::message_id_t id = n_messages_.fetch_add(1);
 
-    messages_to_send_mutex_.lock();
-    messages_to_send_.insert(Message{id, msg});
-    messages_to_send_mutex_.unlock();
+    messages_to_send_.mutex.lock();
+    messages_to_send_.data.insert(Message{id, msg});
+    messages_to_send_.mutex.unlock();
 
     // Log that we sent message
     // (Technically we didn't send it still, but we will for sure)
@@ -53,22 +53,21 @@ void PerfectLink::SendAcks()
 {
     while (true)
     {
-        acks_to_send_mutex_.lock_shared();
-
-        if (acks_to_send_.empty())
+        acks_to_send_.mutex.lock_shared();
+        if (acks_to_send_.data.empty())
         {
-            acks_to_send_mutex_.unlock_shared();
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            acks_to_send_.mutex.unlock_shared();
+            std::this_thread::sleep_for(std::chrono::milliseconds(kNoAcksToSendTimeoutMs));
             continue;
         }
 
-        for (auto &ack : acks_to_send_)
+        for (auto &ack : acks_to_send_.data)
         {
-            static char buffer[kACK_SIZE + 1];
+            static char buffer[kAckSize + 1];
             if (std::snprintf(buffer, sizeof(buffer), "ACK %010lu", ack.id) <= 0)
             {
                 // TODO: how to handle this exception?
-                acks_to_send_mutex_.unlock_shared();
+                acks_to_send_.mutex.unlock_shared();
                 throw std::runtime_error("Error during formatting.");
             }
 
@@ -85,60 +84,58 @@ void PerfectLink::SendAcks()
             }
         }
 
-        acks_to_send_mutex_.unlock_shared();
+        acks_to_send_.mutex.unlock_shared();
 
         CleanAcks();
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(kFinishSendingAllAcksMs));
     }
 }
 
 void PerfectLink::CleanAcks()
 {
-    static const double timeout = 0.5; // 0.5 seconds timeout to stop sending ack's
-
     std::vector<Message::message_id_t> acks_to_remove;
 
-    messages_delivered_mutex_.lock_shared();
+    messages_delivered_.mutex.lock_shared();
     time_t now = std::time(nullptr);
-    for (auto const &msg : messages_delivered_)
+    for (auto const &msg : messages_delivered_.data)
     {
         auto delta = std::difftime(now, msg.second);
-        if (delta >= timeout)
+        if (delta >= kStopSendingAcksTimeoutSec)
         {
             acks_to_remove.push_back(msg.first);
         }
     }
-    messages_delivered_mutex_.unlock_shared();
+    messages_delivered_.mutex.unlock_shared();
 
-    acks_to_send_mutex_.lock();
+    acks_to_send_.mutex.lock();
     for (auto const &ack_id : acks_to_remove)
     {
-        acks_to_send_.erase({ack_id});
+        acks_to_send_.data.erase({ack_id});
     }
-    acks_to_send_mutex_.unlock();
+    acks_to_send_.mutex.unlock();
 }
 
 void PerfectLink::SendMessages()
 {
     while (true)
     {
-        messages_to_send_mutex_.lock_shared();
+        messages_to_send_.mutex.lock_shared();
 
-        if (messages_to_send_.empty())
+        if (messages_to_send_.data.empty())
         {
-            messages_to_send_mutex_.unlock_shared();
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            messages_to_send_.mutex.unlock_shared();
+            std::this_thread::sleep_for(std::chrono::milliseconds(kNoMsgsToSendTimeoutMs));
             continue;
         }
 
-        for (auto &msg : messages_to_send_)
+        for (auto &msg : messages_to_send_.data)
         {
             static char buffer[UDPServer::MAX_MSG_SIZE];
             if (std::snprintf(buffer, sizeof(buffer), "MSG %010lu PAYLOAD %s", msg.id, msg.payload.c_str()) <= 0)
             {
                 // TODO: how to handle this exception?
-                messages_to_send_mutex_.unlock_shared();
+                messages_to_send_.mutex.unlock_shared();
                 throw std::runtime_error("Error during formatting.");
             }
 
@@ -155,9 +152,9 @@ void PerfectLink::SendMessages()
             }
         }
 
-        messages_to_send_mutex_.unlock_shared();
+        messages_to_send_.mutex.unlock_shared();
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(kFinishSendingAllMsgsMs));
     }
 }
 
@@ -178,20 +175,20 @@ void PerfectLink::Deliver(const std::string &msg)
         // Received a Message
         Message message = std::get<0>(parsed_msg.value());
 
-        acks_to_send_mutex_.lock();
-        acks_to_send_.insert({message.id});
-        acks_to_send_mutex_.unlock();
+        acks_to_send_.mutex.lock();
+        acks_to_send_.data.insert({message.id});
+        acks_to_send_.mutex.unlock();
 
-        messages_delivered_mutex_.lock();
-        if (messages_delivered_.find(message.id) == messages_delivered_.end())
+        messages_delivered_.mutex.lock();
+        if (messages_delivered_.data.find(message.id) == messages_delivered_.data.end())
         {
             // Log that we received a message
             std::stringstream ss;
             ss << "d " << target_id_ << " " << message.id;
             logger_ << ss.str();
         }
-        messages_delivered_[message.id] = std::time(nullptr);
-        messages_delivered_mutex_.unlock();
+        messages_delivered_.data[message.id] = std::time(nullptr);
+        messages_delivered_.mutex.unlock();
     }
     else
     {
@@ -202,25 +199,25 @@ void PerfectLink::Deliver(const std::string &msg)
         std::cout << "[DBUG] Received Ack for Message " << ack.id << "\n";
 #endif
 
-        messages_to_send_mutex_.lock();
-        auto message = messages_to_send_.find(Message{ack.id, {}});
-        if (message != messages_to_send_.end())
+        messages_to_send_.mutex.lock();
+        auto message = messages_to_send_.data.find(Message{ack.id, {}});
+        if (message != messages_to_send_.data.end())
         {
 #ifdef DEBUG
             std::cout << "[DBUG] Successfully Sent Message " << ack.id << " To Process " << target_id_ << ": '" << (*message).payload << "'" << std::endl;
 #endif
             // If we were sending this message, 
             // then stop sending it peer has received
-            messages_to_send_.erase({ack.id, {}});
+            messages_to_send_.data.erase({ack.id, {}});
         } 
         // [else] We've seen this ack before, ignore it
-        messages_to_send_mutex_.unlock();
+        messages_to_send_.mutex.unlock();
     }
 }
 
 std::optional<std::variant<PerfectLink::Message, PerfectLink::Ack>> PerfectLink::Parse(std::string msg)
 {
-    if (msg.size() > kMIN_VALID_MSG_SIZE && msg.substr(0, 3) == "MSG") // MSG <id> PAYLOAD <payload>
+    if (msg.size() > kMsgPrefixSize && msg.substr(0, 3) == "MSG") // MSG <id> PAYLOAD <payload>
     {
         try
         {
@@ -232,7 +229,7 @@ std::optional<std::variant<PerfectLink::Message, PerfectLink::Ack>> PerfectLink:
             return {};
         }
     }
-    else if (msg.size() == kACK_SIZE && msg.substr(0, 3) == "ACK") // ACK <id>
+    else if (msg.size() == kAckSize && msg.substr(0, 3) == "ACK") // ACK <id>
     {
         try
         {
