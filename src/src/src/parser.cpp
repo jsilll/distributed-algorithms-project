@@ -72,7 +72,9 @@ unsigned short Parser::Host::port_readable() const
 
 in_addr_t Parser::Host::IpLookup(const char *host)
 {
-    struct addrinfo hints{}, *res;
+    struct addrinfo hints
+    {
+    }, *res;
     char addrstr[128];
     void *ptr;
 
@@ -114,7 +116,9 @@ in_addr_t Parser::Host::IpLookup(const char *host)
 
 bool Parser::Host::IsValidAddress(const char *ipAddress)
 {
-    struct sockaddr_in sa{};
+    struct sockaddr_in sa
+    {
+    };
     int result = inet_pton(AF_INET, ipAddress, &(sa.sin_addr));
     return result != 0;
 }
@@ -383,11 +387,13 @@ void Parser::ParseHostsFile()
         {
             std::ostringstream os;
             os << "Parsing for `" << hosts_path() << "` failed at line " << lineNum;
+            hostsFile.close();
             throw std::invalid_argument(os.str());
         }
 
         hosts_.emplace_back(id, ip, port);
     }
+    hostsFile.close();
 
     if (hosts_.size() < 2UL)
     {
@@ -432,6 +438,7 @@ void Parser::ParseConfigFile()
     Trim(line);
     if (line.empty())
     {
+        config_file.close();
         throw std::runtime_error("Config file is empty.");
     }
 
@@ -442,11 +449,15 @@ void Parser::ParseConfigFile()
         {
             std::ostringstream os;
             os << "Parsing for `" << config_path() << "` failed at line 1";
+            config_file.close();
             throw std::invalid_argument(os.str());
         }
+
+        config_file.close();
         break;
 
     default:
+        config_file.close();
         throw std::runtime_error("Invalid execution mode.");
     }
 }
