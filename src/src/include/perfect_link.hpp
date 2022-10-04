@@ -63,10 +63,10 @@ private:
 
     /**
      * @brief This value should be the result of:
-     * kFinishSendingAllAcksMs + Network Delay + Peer Processing Time
+     * kFinishSendingAllMsgsMs + Network Delay + Peer Processing Time
      *
      */
-    static constexpr double kStopSendingAcksTimeoutSec = static_cast<double>(kFinishSendingAllAcksMs + 100 + 50) / 1000.0;
+    static constexpr double kStopSendingAcksTimeoutSec = static_cast<double>(kFinishSendingAllMsgsMs + 250 + 100) / 1000.0;
 
 private:
     const unsigned long int id_;
