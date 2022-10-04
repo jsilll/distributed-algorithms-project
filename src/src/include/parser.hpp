@@ -49,7 +49,6 @@ private:
   unsigned long n_messages_;
   unsigned long receiver_id_;
 
-  bool debug_{};
   ExecMode exec_mode_{kPerfectLinks};
 
 public:
@@ -69,7 +68,6 @@ public:
   unsigned long receiver_id() const;
   Host localhost() const;
   ExecMode exec_mode() const;
-  bool debug() const;
 
 private:
   void CheckParsed() const;
@@ -79,7 +77,6 @@ private:
 
   bool ParseId();
   void ParseMode();
-  void ParseDebug();
   bool ParseHostPath();
   bool ParseOutputPath();
   bool ParseConfigPath();

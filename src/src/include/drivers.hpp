@@ -14,7 +14,6 @@ namespace drivers
                       unsigned long receiver_id,
                       unsigned long n_messages,
                       const std::vector<Parser::Host> &hosts,
-                      bool debug,
                       Logger &logger);
 
 } // namespace drivers

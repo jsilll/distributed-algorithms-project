@@ -25,7 +25,6 @@ void drivers::PerfectLinks(const unsigned long int id,
                            const unsigned long int target_id,
                            const unsigned long n_messages,
                            const std::vector<Parser::Host> &hosts,
-                           bool debug,
                            Logger &logger)
 {
     Parser::Host localhost = hosts[id - 1];
@@ -65,8 +64,7 @@ void drivers::PerfectLinks(const unsigned long int id,
                        target_host.port,
                        server.value(),
                        client.value(),
-                       logger,
-                       debug);
+                       logger);
         }
         catch (const std::exception &e)
         {
@@ -74,7 +72,8 @@ void drivers::PerfectLinks(const unsigned long int id,
             std::exit(EXIT_FAILURE);
         }
 
-        std::cout << "[INFO] Sending Messages ..." << std::endl;
+        std::cout << "[INFO] Sending Messages\n";
+        std::cout << "[INFO] ================" << std::endl;
 
         for (unsigned long i = 0; i < n_messages; ++i)
         {
@@ -87,7 +86,8 @@ void drivers::PerfectLinks(const unsigned long int id,
     {
         std::vector<std::unique_ptr<PerfectLink>> pls;
 
-        std::cout << "[INFO] Receiving Messages ..." << std::endl;
+        std::cout << "[INFO] Receiving Messages\n";
+        std::cout << "[INFO] ==================" << std::endl;
 
         for (auto &peer : hosts)
         {
@@ -101,8 +101,7 @@ void drivers::PerfectLinks(const unsigned long int id,
                                                                 peer.port,
                                                                 server.value(),
                                                                 client.value(),
-                                                                logger,
-                                                                debug));
+                                                                logger));
                 }
                 catch (const std::exception &e)
                 {

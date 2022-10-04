@@ -75,7 +75,6 @@ int main(int argc, char *argv[])
                           parser.receiver_id(),
                           parser.n_messages(),
                           parser.hosts(),
-                          parser.debug(),
                           logger);
     break;
   default:

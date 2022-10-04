@@ -5,9 +5,12 @@
 #include <string>
 #include <thread>
 #include <sstream>
-
 #include <memory>
 #include <stdexcept>
+
+#ifdef DEBUG
+#include <iostream>
+#endif
 
 PerfectLink::PerfectLink(unsigned long int id,
                          const unsigned long int target_id,
@@ -15,8 +18,7 @@ PerfectLink::PerfectLink(unsigned long int id,
                          unsigned short target_pot,
                          UDPServer &server,
                          UDPClient &client,
-                         Logger &logger,
-                         bool debug)
+                         Logger &logger)
     : id_(id), target_id_(target_id), target_addr_(UDPClient::Address(target_ip, target_pot)),
       client_(client), server_(server),
       ack_thread_(std::thread(&PerfectLink::SendAcks, this)),
@@ -24,7 +26,6 @@ PerfectLink::PerfectLink(unsigned long int id,
       logger_(logger)
 {
     server_.Attach(this, target_addr_);
-    debug_.store(debug);
 }
 
 PerfectLink::~PerfectLink()
@@ -35,14 +36,17 @@ PerfectLink::~PerfectLink()
 
 void PerfectLink::Send(const std::string &msg)
 {
-    messages_to_send_mutex_.lock();
-    messages_to_send_.insert(Message{n_messages_.fetch_add(1), msg});
-    messages_to_send_mutex_.unlock();
-}
+    Message::message_id_t id = n_messages_.fetch_add(1);
 
-void PerfectLink::debug(bool debug)
-{
-    debug_.store(debug);
+    messages_to_send_mutex_.lock();
+    messages_to_send_.insert(Message{id, msg});
+    messages_to_send_mutex_.unlock();
+
+    // Log that we sent message
+    // (Technically we didn't send it still, but we will for sure)
+    std::stringstream ss;
+    ss << "b " << id;
+    logger_ << ss.str();
 }
 
 void PerfectLink::SendAcks()
@@ -71,10 +75,9 @@ void PerfectLink::SendAcks()
             try
             {
                 client_.Send(std::string(buffer), target_addr_);
-                if (debug_.load())
-                {
-                    std::cout << "[INFO] Sending Ack " << ack.id << " To Process " << target_id_ << "\n";
-                }
+#ifdef DEBUG
+                std::cout << "[DBUG] Sending Ack " << ack.id << " To Process " << target_id_ << "\n";
+#endif
             }
             catch (const std::exception &e)
             {
@@ -142,10 +145,9 @@ void PerfectLink::SendMessages()
             try
             {
                 client_.Send(std::string(buffer), target_addr_);
-                if (debug_.load())
-                {
-                    std::cout << "[INFO] Sending Message " << msg.id << " To Process " << target_id_ << ": '" << msg.payload << "'\n";
-                }
+#ifdef DEBUG
+                std::cout << "[DBUG] Sending Message " << msg.id << " To Process " << target_id_ << ": '" << msg.payload << "'\n";
+#endif
             }
             catch (const std::exception &e)
             {
@@ -165,16 +167,15 @@ void PerfectLink::Deliver(const std::string &msg)
 
     if (!parsed_msg.has_value())
     {
-        if (debug_.load())
-        {
-            std::cerr << "[INFO] Received Invalid Message: '" << msg << "'\n";
-        }
-
+#ifdef DEBUG
+        std::cerr << "[DBUG] Ignoring Invalid Message: '" << msg << "'\n";
+#endif
         return;
     }
 
-    if (parsed_msg.value().index() == 0) // Received a Message
+    if (parsed_msg.value().index() == 0)
     {
+        // Received a Message
         Message message = std::get<0>(parsed_msg.value());
 
         acks_to_send_mutex_.lock();
@@ -184,7 +185,7 @@ void PerfectLink::Deliver(const std::string &msg)
         messages_delivered_mutex_.lock();
         if (messages_delivered_.find(message.id) == messages_delivered_.end())
         {
-            std::cout << "[ LOG] Received Message " << message.id << " From Process " << target_id_ << ": '" << message.payload << "'\n";
+            // Log that we received a message
             std::stringstream ss;
             ss << "d " << target_id_ << " " << message.id;
             logger_ << ss.str();
@@ -192,27 +193,27 @@ void PerfectLink::Deliver(const std::string &msg)
         messages_delivered_[message.id] = std::time(nullptr);
         messages_delivered_mutex_.unlock();
     }
-    else // Received an Ack
+    else
     {
+        // Received an Ack
         Ack ack = std::get<1>(parsed_msg.value());
 
-        if (debug_.load())
-        {
-            std::cout << "[INFO] Received Ack: '" << ack.id << "'\n";
-        }
+#ifdef DEBUG
+        std::cout << "[DBUG] Received Ack for Message " << ack.id << "\n";
+#endif
 
         messages_to_send_mutex_.lock();
-        auto message = messages_to_send_.find(Message{ack.id, ""});
+        auto message = messages_to_send_.find(Message{ack.id, {}});
         if (message != messages_to_send_.end())
         {
-            std::cout << "[ LOG] Successfully Sent Message " << ack.id << " To Process " << target_id_ << ": '" << (*message).payload << "'" << std::endl;
-
-            std::stringstream ss;
-            ss << "b " << ack.id;
-            logger_ << ss.str();
-
-            messages_to_send_.erase({ack.id, ""});
-        }
+#ifdef DEBUG
+            std::cout << "[DBUG] Successfully Sent Message " << ack.id << " To Process " << target_id_ << ": '" << (*message).payload << "'" << std::endl;
+#endif
+            // If we were sending this message, 
+            // then stop sending it peer has received
+            messages_to_send_.erase({ack.id, {}});
+        } 
+        // [else] We've seen this ack before, ignore it
         messages_to_send_mutex_.unlock();
     }
 }

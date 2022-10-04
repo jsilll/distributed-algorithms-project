@@ -32,7 +32,7 @@ public:
 
     struct Ack
     {
-        unsigned long int id;
+        Message::message_id_t id;
     };
 
 private:
@@ -43,7 +43,7 @@ private:
     const unsigned long int id_;
 
     const unsigned long int target_id_;
-    sockaddr_in target_addr_;
+    const sockaddr_in target_addr_;
 
     std::atomic<Message::message_id_t> n_messages_{0};
 
@@ -64,8 +64,6 @@ private:
 
     Logger &logger_;
 
-    std::atomic<bool> debug_;
-
 public:
     PerfectLink(unsigned long int id_,
                 const unsigned long int target_id_,
@@ -73,14 +71,11 @@ public:
                 unsigned short receiver_port,
                 UDPServer &server,
                 UDPClient &client,
-                Logger &logger,
-                bool debug = false);
+                Logger &logger);
 
     ~PerfectLink();
 
     void Send(const std::string &msg);
-
-    void debug(bool debug);
 
 private:
     void SendAcks();

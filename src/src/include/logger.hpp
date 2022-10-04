@@ -7,7 +7,6 @@
 class Logger
 {
 private:
-    bool debug_{};
     std::ofstream file_;
 
 public:
@@ -25,10 +24,9 @@ public:
     {
         logger.file_ << text << std::endl;
 
-        if (logger.debug_)
-        {
-            std::cout << text << "\n";
-        }
+        #ifdef DEBUG
+            std::cout << "[DLOG] " << text << "\n";
+        #endif
 
         return logger;
     }
