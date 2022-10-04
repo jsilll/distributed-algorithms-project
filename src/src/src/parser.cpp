@@ -356,20 +356,20 @@ bool Parser::ParseConfigPath()
 
 void Parser::ParseHostsFile()
 {
-    std::ifstream hostsFile(hosts_path());
+    std::ifstream hosts_file(hosts_path());
 
-    if (!hostsFile.is_open())
+    if (!hosts_file.is_open())
     {
         std::ostringstream os;
         os << "`" << hosts_path() << "` does not exist.";
         throw std::invalid_argument(os.str());
     }
 
+    int n_lines = 0;
     std::string line;
-    int lineNum = 0;
-    while (std::getline(hostsFile, line))
+    while (std::getline(hosts_file, line))
     {
-        lineNum += 1;
+        ++n_lines;
 
         std::istringstream iss(line);
 
@@ -379,21 +379,22 @@ void Parser::ParseHostsFile()
             continue;
         }
 
-        unsigned long id;
         std::string ip;
+        unsigned long id;
         unsigned short port;
-
         if (!(iss >> id >> ip >> port))
         {
             std::ostringstream os;
-            os << "Parsing for `" << hosts_path() << "` failed at line " << lineNum;
-            hostsFile.close();
+            os << "Parsing for `" << hosts_path() << "` failed at line " << n_lines;
             throw std::invalid_argument(os.str());
         }
 
+#ifdef DEBUG
+        std::cout << "[DEBUG] Reading Host: " << id << " " << ip << " " << port << std::endl;
+#endif
         hosts_.emplace_back(id, ip, port);
+    
     }
-    hostsFile.close();
 
     if (hosts_.size() < 2UL)
     {
@@ -418,6 +419,15 @@ void Parser::ParseHostsFile()
     std::sort(hosts_.begin(), hosts_.end(),
               [](const Host &a, const Host &b) -> bool
               { return a.id < b.id; });
+
+#ifdef DEBUG
+    std::cout << "[DEBUG] Hosts Vector" << std::endl;
+    std::cout << "[DEBUG] ============" << std::endl;
+    for (const auto &host : hosts_)
+    {
+        std::cout << "[DEBUG] " << host.id << " " << host.ip_readable() << " " << host.port_readable() << std::endl;
+    }
+#endif
 }
 
 void Parser::ParseConfigFile()
@@ -438,7 +448,6 @@ void Parser::ParseConfigFile()
     Trim(line);
     if (line.empty())
     {
-        config_file.close();
         throw std::runtime_error("Config file is empty.");
     }
 
@@ -449,15 +458,12 @@ void Parser::ParseConfigFile()
         {
             std::ostringstream os;
             os << "Parsing for `" << config_path() << "` failed at line 1";
-            config_file.close();
             throw std::invalid_argument(os.str());
         }
 
-        config_file.close();
         break;
 
     default:
-        config_file.close();
         throw std::runtime_error("Invalid execution mode.");
     }
 }
