@@ -17,10 +17,7 @@
 #include "udp_client.hpp"
 #include "logger.hpp"
 
-class Broadcast;
-class PerfectLink;
-
-class PerfectLink : public UDPServer::Observer
+class PerfectLink final : public UDPServer::Observer
 {
 public:
     struct Message
@@ -30,7 +27,7 @@ public:
         message_id_t id;
         std::string payload;
 
-        inline friend bool operator<(Message m1, Message m2)
+        inline friend bool operator<(const Message &m1, const Message &m2)
         {
             return m1.id < m2.id;
         }
@@ -47,8 +44,8 @@ public:
     };
 
 private:
-    template<typename T>
-    struct Shared 
+    template <typename T>
+    struct Shared
     {
         T data{};
         std::shared_mutex mutex{};
@@ -67,7 +64,7 @@ private:
     /**
      * @brief This value should be the result of:
      * kFinishSendingAllAcksMs + Network Delay + Peer Processing Time
-     * 
+     *
      */
     static constexpr double kStopSendingAcksTimeoutSec = static_cast<double>(kFinishSendingAllAcksMs + 100 + 50) / 1000.0;
 
@@ -92,15 +89,19 @@ private:
     Logger &logger_;
 
 public:
+    PerfectLink() = delete;
+    PerfectLink(const PerfectLink &) = delete;
+    PerfectLink(PerfectLink &&) = delete;
+
     PerfectLink(unsigned long int id_,
-                const unsigned long int target_id_,
+                unsigned long int target_id_,
                 in_addr_t receiver_ip,
                 unsigned short receiver_port,
                 UDPServer &server,
                 UDPClient &client,
                 Logger &logger);
 
-    ~PerfectLink();
+    ~PerfectLink() final;
 
     void Send(const std::string &msg);
 
@@ -109,5 +110,5 @@ private:
     void CleanAcks();
     void SendMessages();
     void Deliver(const std::string &msg) override;
-    std::optional<std::variant<Message, Ack>> Parse(std::string msg);
+    static std::optional<std::variant<Message, Ack>> Parse(const std::string &msg);
 };

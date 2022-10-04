@@ -10,7 +10,7 @@ private:
     std::ofstream file_;
 
 public:
-    Logger(const std::string &fname = "output.txt");
+    explicit Logger(const std::string &fname = "output.txt");
 
     Logger(const Logger &) = delete;
 

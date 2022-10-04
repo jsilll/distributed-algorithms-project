@@ -5,7 +5,6 @@
 #include <string>
 #include <thread>
 #include <sstream>
-#include <memory>
 #include <stdexcept>
 
 #ifdef DEBUG
@@ -73,7 +72,7 @@ void PerfectLink::SendAcks()
 
             try
             {
-                client_.Send(std::string(buffer), target_addr_);
+                [[maybe_unused]] ssize_t bytes = client_.Send(std::string(buffer), target_addr_);
 #ifdef DEBUG
                 std::cout << "[DBUG] Sending Ack " << ack.id << " To Process " << target_id_ << "\n";
 #endif
@@ -141,7 +140,7 @@ void PerfectLink::SendMessages()
 
             try
             {
-                client_.Send(std::string(buffer), target_addr_);
+                 [[maybe_unused]] ssize_t bytes = client_.Send(std::string(buffer), target_addr_);
 #ifdef DEBUG
                 std::cout << "[DBUG] Sending Message " << msg.id << " To Process " << target_id_ << ": '" << msg.payload << "'\n";
 #endif
@@ -206,19 +205,20 @@ void PerfectLink::Deliver(const std::string &msg)
 #ifdef DEBUG
             std::cout << "[DBUG] Successfully Sent Message " << ack.id << " To Process " << target_id_ << ": '" << (*message).payload << "'" << std::endl;
 #endif
-            // If we were sending this message, 
+            // If we were sending this message,
             // then stop sending it peer has received
             messages_to_send_.data.erase({ack.id, {}});
-        } 
+        }
         // [else] We've seen this ack before, ignore it
         messages_to_send_.mutex.unlock();
     }
 }
 
-std::optional<std::variant<PerfectLink::Message, PerfectLink::Ack>> PerfectLink::Parse(std::string msg)
+std::optional<std::variant<PerfectLink::Message, PerfectLink::Ack>> PerfectLink::Parse(const std::string& msg)
 {
-    if (msg.size() > kMsgPrefixSize && msg.substr(0, 3) == "MSG") // MSG <id> PAYLOAD <payload>
+    if (msg.size() > kMsgPrefixSize && msg.substr(0, 3) == "MSG")
     {
+        // Format: MSG <id> PAYLOAD <payload>
         try
         {
             unsigned long id = std::stoul(msg.substr(5, 13));
@@ -229,8 +229,9 @@ std::optional<std::variant<PerfectLink::Message, PerfectLink::Ack>> PerfectLink:
             return {};
         }
     }
-    else if (msg.size() == kAckSize && msg.substr(0, 3) == "ACK") // ACK <id>
+    else if (msg.size() == kAckSize && msg.substr(0, 3) == "ACK")
     {
+        // Format: ACK <id>
         try
         {
             unsigned long id = std::stoul(msg.substr(5, 13));

@@ -2,7 +2,6 @@
 
 #include <arpa/inet.h>
 #include <cstring>
-#include <netdb.h>
 #include <stdexcept>
 #include <string>
 #include <sys/socket.h>
@@ -11,7 +10,7 @@
 
 #include "udp_server.hpp"
 
-UDPClient::UDPClient(void)
+UDPClient::UDPClient()
     : sockfd_(socket(AF_INET, SOCK_DGRAM, 0)), sock_owner_(true)
 {
     if (sockfd_ < 0)
@@ -37,7 +36,7 @@ UDPClient::~UDPClient()
     }
 }
 
-ssize_t UDPClient::Send(const std::string &msg, sockaddr_in to_addr)
+ssize_t UDPClient::Send(const std::string &msg, sockaddr_in to_addr) const
 {
     ssize_t res = sendto(sockfd_, msg.c_str(), msg.size(), 0, reinterpret_cast<struct sockaddr *>(&to_addr), sizeof(to_addr));
 
@@ -51,7 +50,7 @@ ssize_t UDPClient::Send(const std::string &msg, sockaddr_in to_addr)
 
 sockaddr_in UDPClient::Address(in_addr_t ip, in_port_t port)
 {
-    sockaddr_in address;
+    sockaddr_in address{};
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = ip;
     address.sin_port = port;

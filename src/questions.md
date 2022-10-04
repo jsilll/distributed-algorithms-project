@@ -9,7 +9,7 @@ Logging:
 
 Threads:
     - Should all memory be free'd even when stoping with Ctrl + C?
-    - Should I use thread::detach or thread::join (may be related to memory leaks)
+    - Should I use thread::detach or thread::join (perhaps related to memory leaks)
 
 TODO:
     - Implement failure detector

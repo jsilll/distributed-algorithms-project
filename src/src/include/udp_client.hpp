@@ -15,13 +15,13 @@ private:
     bool sock_owner_{};
 
 public:
-    UDPClient(void);
+    UDPClient();
 
-    UDPClient(UDPServer &server);
+    explicit UDPClient(UDPServer &server);
 
     ~UDPClient();
 
-    ssize_t Send(const std::string &msg, sockaddr_in to_addr);
+    [[nodiscard]] ssize_t Send(const std::string &msg, sockaddr_in to_addr) const;
 
     static sockaddr_in Address(in_addr_t ip, unsigned short port);
 };

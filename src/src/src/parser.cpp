@@ -1,6 +1,5 @@
 #include "parser.hpp"
 
-#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -8,13 +7,10 @@
 
 #include <algorithm>
 #include <cctype>
-#include <locale>
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
-#include <sys/types.h>
 
-#include <cstdlib>
 #include <cstring>
 
 // ---------- Helper Methods ---------- //
@@ -64,9 +60,9 @@ Parser::Host::Host(size_t id, std::string &ip_or_hostname, unsigned short port)
 
 std::string Parser::Host::ip_readable() const
 {
-    in_addr tmp_ip;
+    in_addr tmp_ip{};
     tmp_ip.s_addr = ip;
-    return std::string(inet_ntoa(tmp_ip));
+    return {inet_ntoa(tmp_ip)};
 }
 
 unsigned short Parser::Host::port_readable() const
@@ -76,7 +72,7 @@ unsigned short Parser::Host::port_readable() const
 
 in_addr_t Parser::Host::IpLookup(const char *host)
 {
-    struct addrinfo hints, *res;
+    struct addrinfo hints{}, *res;
     char addrstr[128];
     void *ptr;
 
@@ -85,7 +81,7 @@ in_addr_t Parser::Host::IpLookup(const char *host)
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags |= AI_CANONNAME;
 
-    if (getaddrinfo(host, NULL, &hints, &res) != 0)
+    if (getaddrinfo(host, nullptr, &hints, &res) != 0)
     {
         throw std::runtime_error(
             "Could not resolve host `" + std::string(host) +
@@ -118,7 +114,7 @@ in_addr_t Parser::Host::IpLookup(const char *host)
 
 bool Parser::Host::IsValidAddress(const char *ipAddress)
 {
-    struct sockaddr_in sa;
+    struct sockaddr_in sa{};
     int result = inet_pton(AF_INET, ipAddress, &(sa.sin_addr));
     return result != 0;
 }
@@ -198,19 +194,6 @@ unsigned long Parser::receiver_id() const
 {
     CheckParsed();
     return receiver_id_;
-}
-
-Parser::Host Parser::localhost() const
-{
-    CheckParsed();
-    if (id_ > hosts_.size())
-    {
-        std::ostringstream os;
-        os << "id `" << id_ << "` does not exist.";
-        throw std::invalid_argument(os.str());
-    }
-
-    return hosts_[id_ - 1];
 }
 
 Parser::ExecMode Parser::exec_mode() const
@@ -403,7 +386,7 @@ void Parser::ParseHostsFile()
             throw std::invalid_argument(os.str());
         }
 
-        hosts_.push_back(Host(id, ip, port));
+        hosts_.emplace_back(id, ip, port);
     }
 
     if (hosts_.size() < 2UL)

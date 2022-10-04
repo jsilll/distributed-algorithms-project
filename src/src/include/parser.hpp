@@ -20,12 +20,12 @@ public:
 
     // -- Getters --
 
-    std::string ip_readable() const;
-    unsigned short port_readable() const;
+    [[nodiscard]] std::string ip_readable() const;
+    [[nodiscard]] unsigned short port_readable() const;
 
   private:
-    in_addr_t IpLookup(const char *host);
-    bool IsValidAddress(const char *ipAddress);
+    static in_addr_t IpLookup(const char *host);
+    static bool IsValidAddress(const char *ipAddress);
   };
 
   enum ExecMode
@@ -45,33 +45,32 @@ private:
 
   std::vector<Host> hosts_;
 
-  unsigned long id_;
-  unsigned long n_messages_;
-  unsigned long receiver_id_;
+  unsigned long id_{};
+  unsigned long n_messages_{};
+  unsigned long receiver_id_{};
 
   ExecMode exec_mode_{kPerfectLinks};
 
 public:
-  Parser(const int argc, char const *const *argv, bool requires_config = true);
+  Parser(int argc, char const *const *argv, bool requires_config = true);
 
   void Parse();
 
   // -- Getters --
 
-  bool requires_config() const;
-  std::string config_path() const;
-  std::string hosts_path() const;
-  std::string output_path() const;
-  std::vector<Host> hosts() const;
-  unsigned long id() const;
-  unsigned long n_messages() const;
-  unsigned long receiver_id() const;
-  Host localhost() const;
-  ExecMode exec_mode() const;
+  [[nodiscard]] bool requires_config() const;
+  [[nodiscard]] std::string config_path() const;
+  [[nodiscard]] std::string hosts_path() const;
+  [[nodiscard]] std::string output_path() const;
+  [[nodiscard]] std::vector<Host> hosts() const;
+  [[nodiscard]] unsigned long id() const;
+  [[nodiscard]] unsigned long n_messages() const;
+  [[nodiscard]] unsigned long receiver_id() const;
+  [[nodiscard]] ExecMode exec_mode() const;
 
 private:
   void CheckParsed() const;
-  void Help(const int, char const *const *argv) const;
+  void Help(int, char const *const *argv) const;
 
   bool ParseInternal();
 

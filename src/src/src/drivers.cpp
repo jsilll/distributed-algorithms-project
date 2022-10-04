@@ -13,7 +13,7 @@
  * messages or setting up all links
  *
  */
-static void wait_forever(void)
+static void wait_forever()
 {
     while (true)
     {
@@ -95,13 +95,14 @@ void drivers::PerfectLinks(const unsigned long int id,
             {
                 try
                 {
-                    pls.push_back(std::make_unique<PerfectLink>(id,
-                                                                peer.id,
-                                                                peer.ip,
-                                                                peer.port,
-                                                                server.value(),
-                                                                client.value(),
-                                                                logger));
+                    auto pl = std::make_unique<PerfectLink>(id,
+                                                            peer.id,
+                                                            peer.ip,
+                                                            peer.port,
+                                                            server.value(),
+                                                            client.value(),
+                                                            logger);
+                    pls.push_back(std::move(pl));
                 }
                 catch (const std::exception &e)
                 {

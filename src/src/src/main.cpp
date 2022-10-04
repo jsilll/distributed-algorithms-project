@@ -1,13 +1,11 @@
-#include <chrono>
 #include <cstring>
 #include <iostream>
-#include <signal.h>
+#include <csignal>
 #include <thread>
 
 #include "parser.hpp"
 #include "logger.hpp"
 #include "drivers.hpp"
-#include "udp_server.hpp"
 #include "info_display.hpp"
 
 /**

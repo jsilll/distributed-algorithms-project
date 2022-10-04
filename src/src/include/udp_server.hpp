@@ -18,11 +18,12 @@ class UDPServer
 public:
     class Observer
     {
-
-    private:
-        virtual void Deliver(const std::string &msg) = 0;
-
         friend class UDPServer;
+
+    protected:
+        virtual ~Observer() = default;
+
+        virtual void Deliver(const std::string &msg) = 0;
     };
 
     struct Machine
@@ -46,16 +47,16 @@ public:
 
     ~UDPServer();
 
-    void Receive();
+    [[noreturn]] void Receive();
 
     void Attach(Observer *obs, sockaddr_in addr);
 
-    void Notify(std::string msg, sockaddr_in addr);
+    void Notify(const std::string& msg, sockaddr_in addr);
 
 private:
     friend class UDPClient;
 
-    int sockfd() const;
+    [[nodiscard]] int sockfd() const;
 };
 
 inline bool operator<(UDPServer::Machine m1, UDPServer::Machine m2)
