@@ -54,11 +54,14 @@ public:
 
     ~UDPServer();
 
+    void Start();
+
     [[noreturn]] void Receive();
 
     void Attach(Observer *obs, sockaddr_in addr);
 
     void Notify(const std::string &msg, sockaddr_in addr);
+
 
 private:
     friend class UDPClient;

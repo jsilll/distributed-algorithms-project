@@ -34,8 +34,8 @@ PerfectLink::~PerfectLink()
 
 void PerfectLink::Start()
 {
-    ack_thread_ = std::thread(std::thread(&PerfectLink::SendAcks, this));
-    send_thread_ = std::thread(std::thread(&PerfectLink::SendMessages, this));
+    ack_thread_ = std::thread(&PerfectLink::SendAcks, this);
+    send_thread_ = std::thread(&PerfectLink::SendMessages, this);
 }
 
 void PerfectLink::Send(const std::string &msg)

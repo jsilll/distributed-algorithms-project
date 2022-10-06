@@ -10,8 +10,7 @@
 
 UDPServer::UDPServer(in_addr_t ip, in_port_t port)
     : sockfd_(socket(AF_INET, SOCK_DGRAM, 0)),
-      server_addr_(UDPClient::Address(ip, port)),
-      receive_thread_(std::thread(&UDPServer::Receive, this))
+      server_addr_(UDPClient::Address(ip, port))
 {
     if (sockfd_ < 0)
     {
@@ -28,6 +27,11 @@ UDPServer::~UDPServer()
 {
     close(sockfd_);
     receive_thread_.detach();
+}
+
+void UDPServer::Start() 
+{
+      receive_thread_ = std::thread(&UDPServer::Receive, this);
 }
 
 [[noreturn]] void UDPServer::Receive()

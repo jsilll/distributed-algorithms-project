@@ -75,7 +75,9 @@ void drivers::PerfectLinks(const unsigned long int id,
         std::cout << "[INFO] Sending Messages\n";
         std::cout << "[INFO] ================" << std::endl;
 
+        server.value().Start();
         pl.value().Start();
+        
         for (unsigned long i = 0; i < n_messages; ++i)
         {
             pl.value().Send(std::to_string(i));
@@ -89,6 +91,8 @@ void drivers::PerfectLinks(const unsigned long int id,
 
         std::cout << "[INFO] Receiving Messages\n";
         std::cout << "[INFO] ==================" << std::endl;
+
+        server.value().Start();
 
         for (const auto peer : hosts)
         {
