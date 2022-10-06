@@ -103,6 +103,7 @@ public:
 
     ~PerfectLink() final;
 
+    void Start();
     void Send(const std::string &msg);
 
 private:

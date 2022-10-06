@@ -49,15 +49,19 @@ UDPServer::~UDPServer()
 
 void UDPServer::Attach(Observer *obs, sockaddr_in addr)
 {
-    observers_[Machine{addr.sin_addr.s_addr, addr.sin_port}].push_back(obs);
+    observers_.mutex.lock();
+    observers_.data[Machine{addr.sin_addr.s_addr, addr.sin_port}].push_back(obs);
+    observers_.mutex.unlock();
 }
 
 void UDPServer::Notify(const std::string& msg, sockaddr_in addr)
 {
-    for (auto const &obs : observers_[Machine{addr.sin_addr.s_addr, addr.sin_port}])
+    observers_.mutex.lock_shared();
+    for (auto const &obs : observers_.data[Machine{addr.sin_addr.s_addr, addr.sin_port}])
     {
         obs->Deliver(msg);
     }
+    observers_.mutex.unlock_shared();
 }
 
 int UDPServer::sockfd() const

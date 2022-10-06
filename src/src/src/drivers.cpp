@@ -75,6 +75,7 @@ void drivers::PerfectLinks(const unsigned long int id,
         std::cout << "[INFO] Sending Messages\n";
         std::cout << "[INFO] ================" << std::endl;
 
+        pl.value().Start();
         for (unsigned long i = 0; i < n_messages; ++i)
         {
             pl.value().Send(std::to_string(i));
@@ -89,7 +90,7 @@ void drivers::PerfectLinks(const unsigned long int id,
         std::cout << "[INFO] Receiving Messages\n";
         std::cout << "[INFO] ==================" << std::endl;
 
-        for (auto &peer : hosts)
+        for (const auto peer : hosts)
         {
             if (id != peer.id)
             {
@@ -102,6 +103,7 @@ void drivers::PerfectLinks(const unsigned long int id,
                                                             server.value(),
                                                             client.value(),
                                                             logger);
+                    pl->Start();
                     pls.push_back(std::move(pl));
                 }
                 catch (const std::exception &e)

@@ -20,8 +20,7 @@ PerfectLink::PerfectLink(unsigned long int id,
                          Logger &logger)
     : id_(id), target_id_(target_id), target_addr_(UDPClient::Address(target_ip, target_pot)),
       client_(client), server_(server),
-      ack_thread_(std::thread(&PerfectLink::SendAcks, this)),
-      send_thread_(std::thread(&PerfectLink::SendMessages, this)),
+
       logger_(logger)
 {
     server_.Attach(this, target_addr_);
@@ -31,6 +30,12 @@ PerfectLink::~PerfectLink()
 {
     ack_thread_.detach();
     send_thread_.detach();
+}
+
+void PerfectLink::Start()
+{
+    ack_thread_ = std::thread(std::thread(&PerfectLink::SendAcks, this));
+    send_thread_ = std::thread(std::thread(&PerfectLink::SendMessages, this));
 }
 
 void PerfectLink::Send(const std::string &msg)
@@ -140,7 +145,7 @@ void PerfectLink::SendMessages()
 
             try
             {
-                 [[maybe_unused]] ssize_t bytes = client_.Send(std::string(buffer), target_addr_);
+                [[maybe_unused]] ssize_t bytes = client_.Send(std::string(buffer), target_addr_);
 #ifdef DEBUG
                 std::cout << "[DBUG] Sending Message " << msg.id << " To Process " << target_id_ << ": '" << msg.payload << "'\n";
 #endif
@@ -214,7 +219,7 @@ void PerfectLink::Deliver(const std::string &msg)
     }
 }
 
-std::optional<std::variant<PerfectLink::Message, PerfectLink::Ack>> PerfectLink::Parse(const std::string& msg)
+std::optional<std::variant<PerfectLink::Message, PerfectLink::Ack>> PerfectLink::Parse(const std::string &msg)
 {
     if (msg.size() > kMsgPrefixSize && msg.substr(0, 3) == "MSG")
     {
