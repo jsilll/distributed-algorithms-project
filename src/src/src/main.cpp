@@ -32,7 +32,7 @@ static void stop_execution(int signum)
 
   logger.Flush();
 
-  std::exit(EXIT_SUCCESS);
+  std::_Exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char *argv[])
