@@ -17,7 +17,7 @@ private:
 public:
     UDPClient();
 
-    explicit UDPClient(UDPServer &server);
+    explicit UDPClient(int sockfd);
 
     ~UDPClient();
 

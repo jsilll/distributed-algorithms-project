@@ -19,8 +19,8 @@ UDPClient::UDPClient()
     }
 }
 
-UDPClient::UDPClient(UDPServer &server)
-    : sockfd_(server.sockfd())
+UDPClient::UDPClient(int sockfd)
+    : sockfd_(sockfd)
 {
     if (sockfd_ < 0)
     {

@@ -62,10 +62,6 @@ public:
 
     void Notify(const std::string &msg, sockaddr_in addr);
 
-
-private:
-    friend class UDPClient;
-
     [[nodiscard]] int sockfd() const;
 };
 
