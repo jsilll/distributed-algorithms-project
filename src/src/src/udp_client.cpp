@@ -8,8 +8,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "udp_server.hpp"
-
 UDPClient::UDPClient()
     : sockfd_(socket(AF_INET, SOCK_DGRAM, 0)), sock_owner_(true)
 {

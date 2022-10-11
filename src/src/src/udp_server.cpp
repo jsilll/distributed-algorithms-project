@@ -38,7 +38,7 @@ void UDPServer::Start()
 {
     while (true)
     {
-        static char buffer[MAX_MSG_SIZE];
+        static char buffer[kMaxMsgSize];
 
         sockaddr_in addr{};
         socklen_t len = sizeof(addr);

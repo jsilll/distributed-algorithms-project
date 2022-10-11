@@ -67,7 +67,7 @@ void PerfectLink::SendAcks()
 
         for (auto &ack : acks_to_send_.data)
         {
-            static char buffer[kAckSize + 1];
+            static thread_local char buffer[kAckSize + 1];
             if (std::snprintf(buffer, sizeof(buffer), "ACK %010lu", ack.id) <= 0)
             {
                 // TODO: how to handle this exception?
@@ -135,7 +135,7 @@ void PerfectLink::SendMessages()
 
         for (auto &msg : messages_to_send_.data)
         {
-            static char buffer[UDPServer::MAX_MSG_SIZE];
+            static char buffer[UDPServer::kMaxMsgSize];
             if (std::snprintf(buffer, sizeof(buffer), "MSG %010lu PAYLOAD %s", msg.id, msg.payload.c_str()) <= 0)
             {
                 // TODO: how to handle this exception?

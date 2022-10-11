@@ -32,7 +32,7 @@ public:
         in_port_t port;
     };
 
-    static const int MAX_MSG_SIZE = 1024;
+    static constexpr int kMaxMsgSize = 1024;
 
 private:
     template <typename T>
