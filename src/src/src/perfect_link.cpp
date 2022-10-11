@@ -135,7 +135,7 @@ void PerfectLink::SendMessages()
 
         for (auto &msg : messages_to_send_.data)
         {
-            static char buffer[UDPServer::kMaxMsgSize];
+            static thread_local char buffer[UDPServer::kMaxMsgSize];
             if (std::snprintf(buffer, sizeof(buffer), "MSG %010lu PAYLOAD %s", msg.id, msg.payload.c_str()) <= 0)
             {
                 // TODO: how to handle this exception?
