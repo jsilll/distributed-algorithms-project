@@ -65,8 +65,10 @@ public:
   [[nodiscard]] std::vector<Host> hosts() const;
   [[nodiscard]] unsigned long id() const;
   [[nodiscard]] unsigned long n_messages() const;
-  [[nodiscard]] unsigned long receiver_id() const;
+  [[nodiscard]] unsigned long target_id() const;
   [[nodiscard]] ExecMode exec_mode() const;
+  [[nodiscard]] Host local_host() const;
+  [[nodiscard]] Host target_host() const;
 
 private:
   void CheckParsed() const;

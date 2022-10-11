@@ -194,7 +194,7 @@ unsigned long Parser::n_messages() const
     return n_messages_;
 }
 
-unsigned long Parser::receiver_id() const
+unsigned long Parser::target_id() const
 {
     CheckParsed();
     return receiver_id_;
@@ -203,6 +203,16 @@ unsigned long Parser::receiver_id() const
 Parser::ExecMode Parser::exec_mode() const
 {
     return exec_mode_;
+}
+
+Parser::Host Parser::local_host() const
+{
+    return hosts_[id_ - 1];
+}
+
+Parser::Host Parser::target_host() const
+{
+    return hosts_[receiver_id_ - 1];
 }
 
 void Parser::CheckParsed() const
@@ -393,7 +403,6 @@ void Parser::ParseHostsFile()
         std::cout << "[DEBUG] Reading Host: " << id << " " << ip << " " << port << std::endl;
 #endif
         hosts_.emplace_back(id, ip, port);
-    
     }
 
     if (hosts_.size() < 2UL)
