@@ -69,7 +69,7 @@ private:
     static constexpr double kStopSendingAcksTimeoutSec = static_cast<double>(kFinishSendingAllMsgsMs + 250 + 100) / 1000.0;
 
 private:
-    [[maybe_unused]] const unsigned long int id_;
+    const unsigned long int id_;
 
     const unsigned long int target_id_;
     const sockaddr_in target_addr_;
