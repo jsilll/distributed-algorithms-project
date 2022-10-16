@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <thread>
 #include <vector>
+#include <atomic>
 
 class UDPClient;
 
@@ -43,8 +44,9 @@ private:
     };
 
     int sockfd_;
-
     sockaddr_in server_addr_;
+    std::atomic_bool on_{false};
+
     std::thread receive_thread_;
 
     Shared<std::map<Machine, std::vector<Observer *>>> observers_;
@@ -56,7 +58,9 @@ public:
 
     void Start();
 
-    [[noreturn]] void Receive();
+    void Stop();
+
+    void Receive();
 
     void Attach(Observer *obs, sockaddr_in addr);
 

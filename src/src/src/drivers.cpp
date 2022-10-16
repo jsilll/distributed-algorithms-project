@@ -1,11 +1,6 @@
 #include "drivers.hpp"
 
 #include <iostream>
-#include <optional>
-
-#include "udp_server.hpp"
-#include "udp_client.hpp"
-#include "perfect_link.hpp"
 
 /**
  * @brief Used for waiting
@@ -21,50 +16,41 @@ static void wait_forever()
     }
 }
 
-void drivers::PerfectLinks(const unsigned long int id,
-                           const unsigned long int target_id,
-                           const unsigned long n_messages,
-                           const std::vector<Parser::Host> &hosts,
-                           Logger &logger)
+void drivers::PerfectLinks(Parser &parser,
+                           Logger &logger,
+                           UDPServer &server,
+                           UDPClient &client,
+                           std::vector<std::unique_ptr<PerfectLink>> &perfect_links)
 {
-    Parser::Host localhost = hosts[id - 1];
-    Parser::Host target_host = hosts[target_id - 1];
+    auto id = parser.id();
+    auto hosts = parser.hosts();
+    auto n_messages = parser.n_messages();
+    auto local_host = parser.local_host();
+    auto target_host = parser.target_host();
 
     std::cout << "[INFO] PerfectLinks Mode Activated\n";
     std::cout << "[INFO] ===========================\n";
     std::cout << "[INFO] n_messages = " << n_messages << "\n";
     std::cout << "[INFO] target_id = " << target_host.id << "\n";
-    std::cout << "[INFO] id = " << localhost.id << "\n";
-    std::cout << "[INFO] ip = " << localhost.ip_readable() << "\n";
-    std::cout << "[INFO] port = " << localhost.port_readable() << std::endl;
+    std::cout << "[INFO] id = " << local_host.id << "\n";
+    std::cout << "[INFO] ip = " << local_host.ip_readable() << "\n";
+    std::cout << "[INFO] port = " << local_host.port_readable() << std::endl;
 
-    std::optional<UDPServer> server;
-    std::optional<UDPClient> client;
-
-    try
+    if (id != target_host.id)
     {
-        server.emplace(localhost.ip, localhost.port);
-        client.emplace(server.value().sockfd());
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << '\n';
-        std::exit(EXIT_FAILURE);
-    }
-
-    if (id != target_id)
-    {
-        std::optional<PerfectLink> pl;
+        server.Start();
 
         try
         {
-            pl.emplace(id,
-                       target_host.id,
-                       target_host.ip,
-                       target_host.port,
-                       server.value(),
-                       client.value(),
-                       logger);
+            auto pl = std::make_unique<PerfectLink>(id,
+                                                    target_host.id,
+                                                    target_host.ip,
+                                                    target_host.port,
+                                                    server,
+                                                    client,
+                                                    logger);
+            pl->Start();
+            perfect_links.push_back(std::move(pl));
         }
         catch (const std::exception &e)
         {
@@ -75,24 +61,22 @@ void drivers::PerfectLinks(const unsigned long int id,
         std::cout << "[INFO] Sending Messages\n";
         std::cout << "[INFO] ================" << std::endl;
 
-        server.value().Start();
-        pl.value().Start();
-        
         for (unsigned long i = 0; i < n_messages; ++i)
         {
-            pl.value().Send(std::to_string(i));
+            for (const auto &pl : perfect_links)
+            {
+                pl->Send(std::to_string(i));
+            }
         }
 
         wait_forever();
     }
     else
     {
-        std::vector<std::unique_ptr<PerfectLink>> pls;
-
         std::cout << "[INFO] Receiving Messages\n";
         std::cout << "[INFO] ==================" << std::endl;
 
-        server.value().Start();
+        server.Start();
 
         for (const auto peer : hosts)
         {
@@ -104,11 +88,11 @@ void drivers::PerfectLinks(const unsigned long int id,
                                                             peer.id,
                                                             peer.ip,
                                                             peer.port,
-                                                            server.value(),
-                                                            client.value(),
+                                                            server,
+                                                            client,
                                                             logger);
                     pl->Start();
-                    pls.push_back(std::move(pl));
+                    perfect_links.push_back(std::move(pl));
                 }
                 catch (const std::exception &e)
                 {

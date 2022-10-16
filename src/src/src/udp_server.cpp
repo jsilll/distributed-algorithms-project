@@ -26,28 +26,36 @@ UDPServer::UDPServer(in_addr_t ip, in_port_t port)
 UDPServer::~UDPServer()
 {
     close(sockfd_);
-    receive_thread_.detach();
 }
 
-void UDPServer::Start() 
+void UDPServer::Start()
 {
-      receive_thread_ = std::thread(&UDPServer::Receive, this);
+    on_.store(true);
+    receive_thread_ = std::thread(&UDPServer::Receive, this);
 }
 
-[[noreturn]] void UDPServer::Receive()
+void UDPServer::Stop()
 {
-    while (true)
+    if (on_.load())
+    {
+        on_.store(false);
+        receive_thread_.join();
+    }
+}
+
+void UDPServer::Receive()
+{
+    while (on_.load())
     {
         static thread_local char buffer[kMaxMsgSize];
 
         sockaddr_in addr{};
         socklen_t len = sizeof(addr);
-        if (recvfrom(sockfd_, buffer, sizeof(buffer), MSG_WAITALL, reinterpret_cast<sockaddr *>(&addr), &len) < 0)
+        ssize_t bytes = recvfrom(sockfd_, buffer, sizeof(buffer), MSG_DONTWAIT, reinterpret_cast<sockaddr *>(&addr), &len);
+        if (bytes > 0)
         {
-            throw std::runtime_error("Error receiving message.");
+            Notify(std::string(buffer), addr);
         }
-
-        Notify(std::string(buffer), addr);
     }
 }
 
@@ -58,7 +66,7 @@ void UDPServer::Attach(Observer *obs, sockaddr_in addr)
     observers_.mutex.unlock();
 }
 
-void UDPServer::Notify(const std::string& msg, sockaddr_in addr)
+void UDPServer::Notify(const std::string &msg, sockaddr_in addr)
 {
     observers_.mutex.lock_shared();
     for (auto const &obs : observers_.data[Machine{addr.sin_addr.s_addr, addr.sin_port}])

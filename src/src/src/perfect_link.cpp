@@ -26,16 +26,21 @@ PerfectLink::PerfectLink(unsigned long int id,
     server_.Attach(this, target_addr_);
 }
 
-PerfectLink::~PerfectLink()
-{
-    ack_thread_.detach();
-    send_thread_.detach();
-}
-
 void PerfectLink::Start()
 {
+    on_.store(true);
     ack_thread_ = std::thread(&PerfectLink::SendAcks, this);
     send_thread_ = std::thread(&PerfectLink::SendMessages, this);
+}
+
+void PerfectLink::Stop()
+{
+    if (on_.load())
+    {
+        on_.store(false);
+        ack_thread_.join();
+        send_thread_.join();
+    }
 }
 
 void PerfectLink::Send(const std::string &msg)
@@ -55,7 +60,7 @@ void PerfectLink::Send(const std::string &msg)
 
 void PerfectLink::SendAcks()
 {
-    while (true)
+    while (on_.load())
     {
         acks_to_send_.mutex.lock_shared();
         if (acks_to_send_.data.empty())
@@ -122,7 +127,7 @@ void PerfectLink::CleanAcks()
 
 void PerfectLink::SendMessages()
 {
-    while (true)
+    while (on_.load())
     {
         messages_to_send_.mutex.lock_shared();
 

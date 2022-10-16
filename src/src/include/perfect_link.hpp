@@ -74,6 +74,7 @@ private:
     const unsigned long int target_id_;
     const sockaddr_in target_addr_;
 
+    std::atomic_bool on_{false};
     std::atomic<Message::message_id_t> n_messages_{1};
 
     UDPClient &client_;
@@ -101,9 +102,10 @@ public:
                 UDPClient &client,
                 Logger &logger);
 
-    ~PerfectLink() final;
-
     void Start();
+
+    void Stop();
+    
     void Send(const std::string &msg);
 
 private:
