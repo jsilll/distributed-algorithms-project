@@ -11,14 +11,18 @@
 namespace drivers
 {
     /**
+     * @brief Responsible for stopping
+     * all the threads (if there any running)
+     * 
+     */
+    void Stop();
+
+
+    /**
      * @brief Responsible for executing
      * the executing the perfect links algorithm
      *
      */
-    void PerfectLinks(Parser &parser,
-                      Logger &logger,
-                      UDPServer &server,
-                      UDPClient &client,
-                      std::vector<std::unique_ptr<PerfectLink>> &perect_links);
+    void PerfectLinks(Parser &parser);
 
 } // namespace drivers

@@ -12,31 +12,28 @@ private:
     std::ofstream file_;
 
 public:
-    explicit Logger(const std::string &fname = "output.txt");
-
-    Logger(const Logger &) = delete;
+    explicit Logger(const std::string &fname);
 
     ~Logger();
 
+    Logger(const Logger &) = delete;
+    Logger(const Logger &&) = delete;
+
     Logger &operator=(const Logger &) = delete;
+    Logger &operator=(const Logger &&) = delete;
 
     void Flush();
 
     void Open(const std::string &fname);
 
-    std::mutex& mutex() 
-    {
-        return mutex_;
-    }
-
     inline friend Logger &operator<<(Logger &logger, const std::string &text)
     {
-        logger.mutex().lock();
+        logger.mutex_.lock();
         logger.file_ << text << std::endl;
 #ifdef DEBUG
         std::cout << "[DLOG] " << text << "\n";
 #endif
-        logger.mutex().unlock();
+        logger.mutex_.unlock();
         return logger;
     }
 };

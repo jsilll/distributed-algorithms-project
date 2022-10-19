@@ -3,12 +3,40 @@
 #include <iostream>
 
 /**
+ * @brief Global scope
+ * needed by stop_execution(int)
+ *
+ */
+static std::optional<Logger> logger;
+
+/**
+ * @brief UDP Server (Receiver)
+ * for this process.
+ *
+ */
+static std::optional<UDPServer> server;
+
+/**
+ * @brief UDP Client (Sender)
+ * for this process.
+ *
+ */
+static std::optional<UDPClient> client;
+
+/**
+ * @brief Stores all the PerfectLinks
+ * established during the process's execution.
+ *
+ */
+static std::vector<std::unique_ptr<PerfectLink>> perfect_links;
+
+/**
  * @brief Used for waiting
  * infinitely after sending all
  * messages or setting up all links
  *
  */
-static void wait_forever()
+static inline void WaitForever()
 {
     while (true)
     {
@@ -16,11 +44,27 @@ static void wait_forever()
     }
 }
 
-void drivers::PerfectLinks(Parser &parser,
-                           Logger &logger,
-                           UDPServer &server,
-                           UDPClient &client,
-                           std::vector<std::unique_ptr<PerfectLink>> &perfect_links)
+void drivers::Stop() 
+{
+  for (const auto &pl : perfect_links) 
+  {
+    pl->Stop();
+  }
+
+  if (server.has_value()) 
+  {
+    server.value().Stop();
+  }
+
+  std::cout << "[INFO] Writing output." << std::endl;
+
+  if (logger.has_value()) 
+  {
+    logger.value().Flush();
+  }
+}
+
+void drivers::PerfectLinks(Parser &parser)
 {
     auto id = parser.id();
     auto hosts = parser.hosts();
@@ -36,9 +80,31 @@ void drivers::PerfectLinks(Parser &parser,
     std::cout << "[INFO] ip = " << local_host.ip_readable() << "\n";
     std::cout << "[INFO] port = " << local_host.port_readable() << std::endl;
 
+    try
+    {
+        logger.emplace(parser.output_path());
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << e.what() << '\n';
+        std::exit(EXIT_FAILURE);
+    }
+
+    try
+    {
+        auto local_host = parser.local_host();
+        server.emplace(local_host.ip, local_host.port);
+        client.emplace(server.value().sockfd());
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << e.what() << '\n';
+        std::exit(EXIT_FAILURE);
+    }
+
     if (id != target_host.id)
     {
-        server.Start();
+        server.value().Start();
 
         try
         {
@@ -46,9 +112,9 @@ void drivers::PerfectLinks(Parser &parser,
                                                     target_host.id,
                                                     target_host.ip,
                                                     target_host.port,
-                                                    server,
-                                                    client,
-                                                    logger);
+                                                    server.value(),
+                                                    client.value(),
+                                                    logger.value());
             pl->Start();
             perfect_links.push_back(std::move(pl));
         }
@@ -69,14 +135,14 @@ void drivers::PerfectLinks(Parser &parser,
             }
         }
 
-        wait_forever();
+        WaitForever();
     }
     else
     {
         std::cout << "[INFO] Receiving Messages\n";
         std::cout << "[INFO] ==================" << std::endl;
 
-        server.Start();
+        server.value().Start();
 
         for (const auto peer : hosts)
         {
@@ -88,9 +154,9 @@ void drivers::PerfectLinks(Parser &parser,
                                                             peer.id,
                                                             peer.ip,
                                                             peer.port,
-                                                            server,
-                                                            client,
-                                                            logger);
+                                                            server.value(),
+                                                            client.value(),
+                                                            logger.value());
                     pl->Start();
                     perfect_links.push_back(std::move(pl));
                 }
@@ -102,6 +168,6 @@ void drivers::PerfectLinks(Parser &parser,
             }
         }
 
-        wait_forever();
+        WaitForever();
     }
 }
