@@ -147,7 +147,7 @@ void Parser::Parse()
     }
 }
 
-bool Parser::requires_config() const
+bool Parser::requires_config() const noexcept
 {
     return requires_config_;
 }
@@ -200,18 +200,28 @@ unsigned long Parser::target_id() const
     return receiver_id_;
 }
 
-Parser::ExecMode Parser::exec_mode() const
+Parser::ExecMode Parser::exec_mode() const noexcept
 {
     return exec_mode_;
 }
 
 Parser::Host Parser::local_host() const
 {
+    if ((id_ - 1) >= hosts_.size())
+    {
+        throw std::invalid_argument("Id is outside list of hosts.");
+    }
+
     return hosts_[id_ - 1];
 }
 
 Parser::Host Parser::target_host() const
 {
+    if ((receiver_id_ - 1) >= hosts_.size())
+    {
+        throw std::invalid_argument("Receiver id is outside list of hosts.");
+    }
+
     return hosts_[receiver_id_ - 1];
 }
 
@@ -265,7 +275,7 @@ bool Parser::ParseInternal()
     return true;
 }
 
-bool Parser::ParseId()
+bool Parser::ParseId() noexcept
 {
     if (argc_ < 3)
     {
@@ -316,7 +326,7 @@ void Parser::ParseMode()
     }
 }
 
-bool Parser::ParseHostPath()
+bool Parser::ParseHostPath() noexcept
 {
     if (argc_ < 5)
     {
@@ -332,7 +342,7 @@ bool Parser::ParseHostPath()
     return false;
 }
 
-bool Parser::ParseOutputPath()
+bool Parser::ParseOutputPath() noexcept
 {
     if (argc_ < 7)
     {
@@ -348,7 +358,7 @@ bool Parser::ParseOutputPath()
     return false;
 }
 
-bool Parser::ParseConfigPath()
+bool Parser::ParseConfigPath() noexcept
 {
     if (!requires_config_)
     {

@@ -18,8 +18,6 @@ public:
 
     Host(size_t id, std::string &ip_or_hostname, unsigned short port);
 
-    // -- Getters --
-
     [[nodiscard]] std::string ip_readable() const;
     [[nodiscard]] unsigned short port_readable() const;
 
@@ -58,7 +56,7 @@ public:
 
   // -- Getters --
 
-  [[nodiscard]] bool requires_config() const;
+  [[nodiscard]] bool requires_config() const noexcept;
   [[nodiscard]] std::string config_path() const;
   [[nodiscard]] std::string hosts_path() const;
   [[nodiscard]] std::string output_path() const;
@@ -66,7 +64,7 @@ public:
   [[nodiscard]] unsigned long id() const;
   [[nodiscard]] unsigned long n_messages() const;
   [[nodiscard]] unsigned long target_id() const;
-  [[nodiscard]] ExecMode exec_mode() const;
+  [[nodiscard]] ExecMode exec_mode() const noexcept;
   [[nodiscard]] Host local_host() const;
   [[nodiscard]] Host target_host() const;
 
@@ -76,11 +74,11 @@ private:
 
   bool ParseInternal();
 
-  bool ParseId();
+  bool ParseId() noexcept;
   void ParseMode();
-  bool ParseHostPath();
-  bool ParseOutputPath();
-  bool ParseConfigPath();
+  bool ParseHostPath() noexcept;
+  bool ParseOutputPath() noexcept;
+  bool ParseConfigPath() noexcept;
   void ParseHostsFile();
   void ParseConfigFile();
 };

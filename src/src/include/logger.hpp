@@ -14,7 +14,7 @@ private:
 public:
     explicit Logger(const std::string &fname);
 
-    ~Logger();
+    ~Logger() noexcept;
 
     Logger(const Logger &) = delete;
     Logger(const Logger &&) = delete;
@@ -22,11 +22,11 @@ public:
     Logger &operator=(const Logger &) = delete;
     Logger &operator=(const Logger &&) = delete;
 
-    void Flush();
+    void Flush() noexcept;
 
-    void Open(const std::string &fname);
+    void Open(const std::string &fname) noexcept;
 
-    inline friend Logger &operator<<(Logger &logger, const std::string &text)
+    inline friend Logger &operator<<(Logger &logger, const std::string &text) noexcept
     {
         logger.mutex_.lock();
         logger.file_ << text << std::endl;

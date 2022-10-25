@@ -5,14 +5,14 @@ Logger::Logger(const std::string &fname)
     file_.open(fname);
 }
 
-Logger::~Logger()
+Logger::~Logger() noexcept
 {   
     mutex_.lock();
     file_.close();
     mutex_.unlock();
 }
 
-void Logger::Open(const std::string &fname)
+void Logger::Open(const std::string &fname) noexcept
 {
     if (file_.is_open())
     {
@@ -22,7 +22,7 @@ void Logger::Open(const std::string &fname)
     file_.open(fname);
 }
 
-void Logger::Flush()
+void Logger::Flush() noexcept
 {
     mutex_.lock();
     file_ << std::flush;

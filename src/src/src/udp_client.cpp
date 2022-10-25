@@ -26,7 +26,7 @@ UDPClient::UDPClient(int sockfd)
     }
 }
 
-UDPClient::~UDPClient()
+UDPClient::~UDPClient() noexcept
 {
     if (sock_owner_)
     {
@@ -46,7 +46,7 @@ ssize_t UDPClient::Send(const std::string &msg, sockaddr_in to_addr) const
     return res;
 }
 
-sockaddr_in UDPClient::Address(in_addr_t ip, in_port_t port)
+sockaddr_in UDPClient::Address(in_addr_t ip, in_port_t port) noexcept
 {
     sockaddr_in address{};
     address.sin_family = AF_INET;

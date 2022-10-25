@@ -15,7 +15,7 @@ namespace drivers
      * all the threads (if there any running)
      * 
      */
-    void Stop();
+    void Stop() noexcept;
 
 
     /**
@@ -23,6 +23,6 @@ namespace drivers
      * the executing the perfect links algorithm
      *
      */
-    void PerfectLinks(Parser &parser);
+    void PerfectLinks(Parser &parser) noexcept;
 
 } // namespace drivers

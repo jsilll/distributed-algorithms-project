@@ -28,7 +28,7 @@ static std::optional<UDPClient> client;
  * established during the process's execution.
  *
  */
-static std::vector<std::unique_ptr<PerfectLink>> perfect_links;
+static PerfectLink::BasicManager pl_manager;
 
 /**
  * @brief Used for waiting
@@ -36,7 +36,7 @@ static std::vector<std::unique_ptr<PerfectLink>> perfect_links;
  * messages or setting up all links
  *
  */
-static inline void WaitForever()
+static inline void WaitForever() noexcept
 {
     while (true)
     {
@@ -44,27 +44,24 @@ static inline void WaitForever()
     }
 }
 
-void drivers::Stop() 
+void drivers::Stop() noexcept
 {
-  for (const auto &pl : perfect_links) 
-  {
-    pl->Stop();
-  }
+    if (server.has_value())
+    {
+        server.value().Stop();
+    }
 
-  if (server.has_value()) 
-  {
-    server.value().Stop();
-  }
+    pl_manager.Stop();
 
-  std::cout << "[INFO] Writing output." << std::endl;
+    std::cout << "[INFO] Writing output." << std::endl;
 
-  if (logger.has_value()) 
-  {
-    logger.value().Flush();
-  }
+    if (logger.has_value())
+    {
+        logger.value().Flush();
+    }
 }
 
-void drivers::PerfectLinks(Parser &parser)
+void drivers::PerfectLinks(Parser &parser) noexcept
 {
     auto id = parser.id();
     auto hosts = parser.hosts();
@@ -115,8 +112,7 @@ void drivers::PerfectLinks(Parser &parser)
                                                     server.value(),
                                                     client.value(),
                                                     logger.value());
-            pl->Start();
-            perfect_links.push_back(std::move(pl));
+            pl_manager.Add(std::move(pl));
         }
         catch (const std::exception &e)
         {
@@ -127,12 +123,12 @@ void drivers::PerfectLinks(Parser &parser)
         std::cout << "[INFO] Sending Messages\n";
         std::cout << "[INFO] ================" << std::endl;
 
+        pl_manager.Start();
+
+        // Sending messages on-the-fly, with the system already running
         for (unsigned long i = 0; i < n_messages; ++i)
         {
-            for (const auto &pl : perfect_links)
-            {
-                pl->Send(std::to_string(i));
-            }
+            pl_manager.Send(target_host.id, std::to_string(i));
         }
 
         WaitForever();
@@ -157,8 +153,7 @@ void drivers::PerfectLinks(Parser &parser)
                                                             server.value(),
                                                             client.value(),
                                                             logger.value());
-                    pl->Start();
-                    perfect_links.push_back(std::move(pl));
+                    pl_manager.Add(std::move(pl));
                 }
                 catch (const std::exception &e)
                 {
@@ -167,6 +162,8 @@ void drivers::PerfectLinks(Parser &parser)
                 }
             }
         }
+
+        pl_manager.Start();
 
         WaitForever();
     }

@@ -54,22 +54,22 @@ private:
 public:
     UDPServer(in_addr_t ip, in_port_t port);
 
-    ~UDPServer();
+    ~UDPServer() noexcept;
 
-    void Start();
+    void Start() noexcept;
 
-    void Stop();
+    void Stop() noexcept;
 
-    void Receive();
+    void Receive() noexcept;
 
-    void Attach(Observer *obs, sockaddr_in addr);
+    void Attach(Observer *obs, sockaddr_in addr) noexcept;
 
     void Notify(const std::string &msg, sockaddr_in addr);
 
-    [[nodiscard]] int sockfd() const;
+    [[nodiscard]] int sockfd() const noexcept;
 };
 
-inline bool operator<(UDPServer::Machine m1, UDPServer::Machine m2)
+inline bool operator<(UDPServer::Machine m1, UDPServer::Machine m2) noexcept
 {
     if (m1.ip != m2.ip)
     {

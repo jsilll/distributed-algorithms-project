@@ -14,7 +14,6 @@
 #include "udp_server.hpp"
 
 
-
 /**
  * @brief Responsible for handling the
  * proper termination of the process

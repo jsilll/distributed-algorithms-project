@@ -23,18 +23,18 @@ UDPServer::UDPServer(in_addr_t ip, in_port_t port)
     }
 }
 
-UDPServer::~UDPServer()
+UDPServer::~UDPServer() noexcept
 {
     close(sockfd_);
 }
 
-void UDPServer::Start()
+void UDPServer::Start() noexcept
 {
     on_.store(true);
     receive_thread_ = std::thread(&UDPServer::Receive, this);
 }
 
-void UDPServer::Stop()
+void UDPServer::Stop() noexcept
 {
     if (on_.load())
     {
@@ -43,7 +43,7 @@ void UDPServer::Stop()
     }
 }
 
-void UDPServer::Receive()
+void UDPServer::Receive() noexcept
 {
     while (on_.load())
     {
@@ -59,7 +59,7 @@ void UDPServer::Receive()
     }
 }
 
-void UDPServer::Attach(Observer *obs, sockaddr_in addr)
+void UDPServer::Attach(Observer *obs, sockaddr_in addr) noexcept
 {
     observers_.mutex.lock();
     observers_.data[Machine{addr.sin_addr.s_addr, addr.sin_port}].push_back(obs);
@@ -76,7 +76,7 @@ void UDPServer::Notify(const std::string &msg, sockaddr_in addr)
     observers_.mutex.unlock_shared();
 }
 
-int UDPServer::sockfd() const
+int UDPServer::sockfd() const noexcept
 {
     return sockfd_;
 }
