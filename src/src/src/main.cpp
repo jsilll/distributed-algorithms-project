@@ -28,7 +28,7 @@ static void stop_execution(int signum)
   std::cout << "\n[INFO] " << strsignal(signum) << " received.\n";
   std::cout << "[INFO] Immediately stopping network packet processing.\n";
 
-  drivers::Stop();
+  drivers::StopExecution();
 
   std::_Exit(EXIT_SUCCESS);
 }

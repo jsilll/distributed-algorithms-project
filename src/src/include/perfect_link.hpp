@@ -22,9 +22,9 @@ class PerfectLink final : public UDPServer::Observer
 public:
     struct Message
     {
-        typedef unsigned long int message_id_t;
+        typedef unsigned long int Id;
 
-        message_id_t id;
+        Id id;
         std::string payload;
 
         inline friend bool operator<(const Message &m1, const Message &m2) noexcept
@@ -35,7 +35,7 @@ public:
 
     struct Ack
     {
-        Message::message_id_t id;
+        Message::Id id;
 
         inline friend bool operator<(Ack ack1, Ack ack2) noexcept
         {
@@ -54,6 +54,8 @@ private:
 public:
     class Manager
     {
+        friend class PerfectLink;
+
     protected:
         static constexpr int kFinishSendingAllAcksMs = 250;
         static constexpr int kFinishSendingAllMsgsMs = 250;
@@ -64,20 +66,18 @@ public:
         Shared<std::map<unsigned long int, std::unique_ptr<PerfectLink>>> perfect_links_;
 
     public:
-        Manager() = default;
+        Manager() noexcept = default;
 
-        virtual ~Manager() = default;
+        virtual ~Manager() noexcept = default;
 
         void Start() noexcept;
         void Stop() noexcept;
 
-        void Add(std::unique_ptr<PerfectLink> pl);
+        void Add(std::unique_ptr<PerfectLink> pl) noexcept;
 
     private:
         void SendAcks();
         void SendMessages();
-
-        friend class PerfectLink;
     };
 
     class BasicManager final : public Manager
@@ -103,14 +103,14 @@ private:
     const unsigned long int target_id_;
     const sockaddr_in target_addr_;
 
-    std::atomic<Message::message_id_t> n_messages_{1};
+    std::atomic<Message::Id> n_messages_{1};
 
     UDPClient &client_;
     UDPServer &server_;
 
     Shared<std::set<Ack>> acks_to_send_{};
     Shared<std::set<Message>> messages_to_send_{};
-    Shared<std::map<Message::message_id_t, time_t>> messages_delivered_{};
+    Shared<std::map<Message::Id, time_t>> messages_delivered_{};
 
     Logger &logger_;
 

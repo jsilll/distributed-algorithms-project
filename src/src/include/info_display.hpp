@@ -26,4 +26,5 @@ namespace info_display
      * @param parser
      */
     void ExecArgs(Parser &parser);
+    
 } // namespace info_display

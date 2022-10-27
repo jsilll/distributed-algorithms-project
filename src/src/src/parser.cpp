@@ -13,8 +13,6 @@
 
 #include <cstring>
 
-// ---------- Helper Methods ---------- //
-
 inline void LeftTrim(std::string &s)
 {
     s.erase(s.begin(), std::find_if(s.begin(), s.end(),
@@ -42,8 +40,6 @@ inline bool IsPositiveNumber(const std::string &s)
     return !s.empty() && std::find_if(s.begin(), s.end(), [](unsigned char c)
                                       { return !std::isdigit(c); }) == s.end();
 }
-
-// ---------- Host Struct ---------- //
 
 Parser::Host::Host(size_t id, std::string &ip_or_hostname, unsigned short port)
     : id{id}, port{htons(port)}
@@ -122,8 +118,6 @@ bool Parser::Host::IsValidAddress(const char *ipAddress)
     int result = inet_pton(AF_INET, ipAddress, &(sa.sin_addr));
     return result != 0;
 }
-
-// ---------- Parser Class ---------- //
 
 Parser::Parser(const int argc, char const *const *argv, bool rc)
     : argc_{argc}, argv_{argv}, requires_config_{rc}, parsed_{false}

@@ -28,7 +28,7 @@ void PerfectLink::Manager::Stop() noexcept
     }
 }
 
-void PerfectLink::Manager::Add(std::unique_ptr<PerfectLink> pl)
+void PerfectLink::Manager::Add(std::unique_ptr<PerfectLink> pl) noexcept
 {
     perfect_links_.mutex.lock();
     perfect_links_.data[pl->target_id_] = std::move(pl);
@@ -92,7 +92,7 @@ PerfectLink::PerfectLink(unsigned long int id,
 
 void PerfectLink::Send(const std::string &msg) noexcept
 {
-    Message::message_id_t id = n_messages_.fetch_add(1);
+    Message::Id id = n_messages_.fetch_add(1);
 
     messages_to_send_.mutex.lock();
     messages_to_send_.data.insert(Message{id, msg});
@@ -117,7 +117,6 @@ void PerfectLink::SendAcks()
         char buffer[kAckSize + 1];
         if (std::snprintf(buffer, sizeof(buffer), "ACK %010lu", ack.id) <= 0)
         {
-            // TODO: how to handle this exception?
             acks_to_send_.mutex.unlock_shared();
             throw std::runtime_error("Error during formatting.");
         }
@@ -142,7 +141,7 @@ void PerfectLink::SendAcks()
 
 void PerfectLink::CleanAcks() noexcept
 {
-    std::vector<Message::message_id_t> acks_to_remove;
+    std::vector<Message::Id> acks_to_remove;
 
     messages_delivered_.mutex.lock_shared();
     time_t now = std::time(nullptr);
@@ -225,7 +224,6 @@ void PerfectLink::Deliver(const std::string &msg) noexcept
         if (messages_delivered_.data.find(message.id) == messages_delivered_.data.end())
         {
             // TODO: Send Message to Subscribers
-
             // Log that we received a message
             std::stringstream ss;
             ss << "d " << target_id_ << " " << message.id;

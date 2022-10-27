@@ -1,16 +1,16 @@
 #pragma once
 
-#include <arpa/inet.h>
-#include <list>
 #include <map>
-#include <netdb.h>
-#include <shared_mutex>
-#include <string>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <thread>
+#include <list>
 #include <vector>
 #include <atomic>
+#include <thread>
+#include <string>
+#include <netdb.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <shared_mutex>
+#include <sys/socket.h>
 
 class UDPClient;
 

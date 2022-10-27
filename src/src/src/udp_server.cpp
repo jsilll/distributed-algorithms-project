@@ -47,8 +47,7 @@ void UDPServer::Receive() noexcept
 {
     while (on_.load())
     {
-        static thread_local char buffer[kMaxMsgSize];
-
+        char buffer[kMaxMsgSize];
         sockaddr_in addr{};
         socklen_t len = sizeof(addr);
         ssize_t bytes = recvfrom(sockfd_, buffer, sizeof(buffer), MSG_DONTWAIT, reinterpret_cast<sockaddr *>(&addr), &len);

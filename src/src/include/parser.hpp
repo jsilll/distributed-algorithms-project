@@ -54,8 +54,6 @@ public:
 
   void Parse();
 
-  // -- Getters --
-
   [[nodiscard]] bool requires_config() const noexcept;
   [[nodiscard]] std::string config_path() const;
   [[nodiscard]] std::string hosts_path() const;

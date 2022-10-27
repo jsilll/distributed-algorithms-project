@@ -15,7 +15,7 @@ namespace drivers
      * all the threads (if there any running)
      * 
      */
-    void Stop() noexcept;
+    void StopExecution() noexcept;
 
 
     /**
