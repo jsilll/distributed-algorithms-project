@@ -17,14 +17,17 @@ static inline void WaitForever() noexcept
 
 void drivers::StopExecution() noexcept
 {
+    if (pl_manager != nullptr)
+    {
+        // Stop sending Messages
+        pl_manager->Stop();
+    }
+
     if (server.has_value())
     {
         // Stop receiving Messages
         server.value().Stop();
     }
-
-    // Stop sending Messages
-    pl_manager->Stop();
 
     std::cout << "[INFO] Writing output." << std::endl;
 

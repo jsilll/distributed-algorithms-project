@@ -54,7 +54,7 @@ private:
 public:
     UDPServer(in_addr_t ip, in_port_t port);
 
-    ~UDPServer() noexcept;
+    ~UDPServer() noexcept = default;
 
     void Start() noexcept;
 

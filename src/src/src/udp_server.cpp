@@ -23,22 +23,19 @@ UDPServer::UDPServer(in_addr_t ip, in_port_t port)
     }
 }
 
-UDPServer::~UDPServer() noexcept
-{
-    close(sockfd_);
-}
-
 void UDPServer::Start() noexcept
 {
     on_.store(true);
     receive_thread_ = std::thread(&UDPServer::Receive, this);
 }
 
-void UDPServer::Stop() noexcept
+// FIXME: maybe add UDPServer::Restart method that opens the sockfd_ again
+void UDPServer::Stop() noexcept 
 {
     if (on_.load())
     {
         on_.store(false);
+        shutdown(sockfd_, SHUT_RDWR);
         receive_thread_.join();
     }
 }
@@ -50,7 +47,7 @@ void UDPServer::Receive() noexcept
         char buffer[kMaxMsgSize];
         sockaddr_in addr{};
         socklen_t len = sizeof(addr);
-        ssize_t bytes = recvfrom(sockfd_, buffer, sizeof(buffer), MSG_DONTWAIT, reinterpret_cast<sockaddr *>(&addr), &len);
+        ssize_t bytes = recvfrom(sockfd_, buffer, sizeof(buffer), 0, reinterpret_cast<sockaddr *>(&addr), &len);
         if (bytes > 0)
         {
             Notify(std::string(buffer), addr);
