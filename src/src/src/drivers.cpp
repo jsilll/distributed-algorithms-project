@@ -9,7 +9,7 @@ static std::optional<UDPServer> server;
 static std::optional<UDPClient> client;
 static std::unique_ptr<PerfectLink::Manager> manager;
 
-static inline void WaitForever() noexcept
+[[noreturn]] static inline void WaitForever() noexcept
 {
     while (true)
     {

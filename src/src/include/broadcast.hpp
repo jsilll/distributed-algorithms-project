@@ -7,13 +7,10 @@
 
 class Broadcast : public PerfectLink::Manager
 {
-private:
-    bool log_;
-
 public:
-    Broadcast(Logger& logger, bool log = false) noexcept : PerfectLink::Manager::Manager(logger), log_(log) {}
+    explicit Broadcast(Logger& logger) noexcept : PerfectLink::Manager::Manager(logger) {}
 
-    virtual ~Broadcast() noexcept override = default;
+    ~Broadcast() noexcept override = default;
 
     virtual void Send(const std::string &msg) = 0;
 };

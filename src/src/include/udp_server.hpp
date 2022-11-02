@@ -60,13 +60,14 @@ public:
 
     void Stop() noexcept;
 
-    void Receive() noexcept;
-
     void Attach(Observer *obs, sockaddr_in addr) noexcept;
 
-    void Notify(const std::string &msg, sockaddr_in addr);
-
     [[nodiscard]] int sockfd() const noexcept;
+private:
+
+    void Receive() noexcept;
+
+    void Notify(const std::string &msg, sockaddr_in addr);
 };
 
 inline bool operator<(UDPServer::Machine m1, UDPServer::Machine m2) noexcept

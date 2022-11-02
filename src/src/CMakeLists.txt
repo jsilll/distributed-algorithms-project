@@ -10,6 +10,7 @@ src/parser.cpp
 src/perfect_link.cpp
 src/udp_client.cpp
 src/udp_server.cpp
+src/best_effort_broadcast.cpp
 )
 
 # DO NOT EDIT THE FOLLOWING LINE

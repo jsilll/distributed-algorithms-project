@@ -29,8 +29,7 @@ void UDPServer::Start() noexcept
     receive_thread_ = std::thread(&UDPServer::Receive, this);
 }
 
-// FIXME: maybe add UDPServer::Restart method that opens the sockfd_ again
-void UDPServer::Stop() noexcept 
+void UDPServer::Stop() noexcept
 {
     if (on_.load())
     {
