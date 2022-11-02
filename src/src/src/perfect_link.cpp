@@ -1,11 +1,11 @@
 #include "perfect_link.hpp"
 
-#include <algorithm>
 #include <list>
 #include <string>
 #include <thread>
 #include <sstream>
 #include <stdexcept>
+#include <algorithm>
 
 #ifdef DEBUG
 #include <iostream>
@@ -30,8 +30,10 @@ void PerfectLink::Manager::Stop() noexcept
 
 void PerfectLink::Manager::Add(std::unique_ptr<PerfectLink> pl) noexcept
 {
+    const unsigned long long id = pl->target_id_;
     perfect_links_.mutex.lock();
-    perfect_links_.data[pl->target_id_] = std::move(pl);
+    perfect_links_.data[id] = std::move(pl);
+    perfect_links_.data[id]->Subscribe(this);
     perfect_links_.mutex.unlock();
 }
 
@@ -70,9 +72,19 @@ void PerfectLink::BasicManager::Send(unsigned long long int receiver_id, const s
     perfect_links_.mutex.lock_shared();
     if (perfect_links_.data.count(receiver_id))
     {
-        perfect_links_.data[receiver_id]->Send(msg);
+        Message::Id id = perfect_links_.data[receiver_id]->Send(msg);
+        std::stringstream ss;
+        ss << "b " << id;
+        logger_ << ss.str();
     }
     perfect_links_.mutex.unlock_shared();
+}
+
+void PerfectLink::BasicManager::Deliever(unsigned long long int sender_id, const Message &msg) noexcept
+{
+    std::stringstream ss;
+    ss << "d " << sender_id << " " << msg.id;
+    logger_ << ss.str();
 }
 
 PerfectLink::PerfectLink(unsigned long int id,
@@ -80,17 +92,14 @@ PerfectLink::PerfectLink(unsigned long int id,
                          in_addr_t target_ip,
                          unsigned short target_pot,
                          UDPServer &server,
-                         UDPClient &client,
-                         Logger &logger)
+                         UDPClient &client)
     : id_(id), target_id_(target_id), target_addr_(UDPClient::Address(target_ip, target_pot)),
-      client_(client), server_(server),
-
-      logger_(logger)
+      client_(client), server_(server)
 {
     server_.Attach(this, target_addr_);
 }
 
-void PerfectLink::Send(const std::string &msg) noexcept
+PerfectLink::Message::Id PerfectLink::Send(const std::string &msg) noexcept
 {
     Message::Id id = n_messages_.fetch_add(1);
 
@@ -98,9 +107,12 @@ void PerfectLink::Send(const std::string &msg) noexcept
     messages_to_send_.data.insert(Message{id, msg});
     messages_to_send_.mutex.unlock();
 
-    std::stringstream ss;
-    ss << "b " << id;
-    logger_ << ss.str();
+    return id;
+}
+
+void PerfectLink::Subscribe(Manager *manager) noexcept
+{
+    managers_.emplace_back(manager);
 }
 
 void PerfectLink::SendAcks()
@@ -223,11 +235,11 @@ void PerfectLink::Deliver(const std::string &msg) noexcept
         messages_delivered_.mutex.lock();
         if (messages_delivered_.data.find(message.id) == messages_delivered_.data.end())
         {
-            // TODO: Send Message to Subscribers
-            // Log that we received a message
-            std::stringstream ss;
-            ss << "d " << target_id_ << " " << message.id;
-            logger_ << ss.str();
+            // Its an unseen message
+            for (const auto manager : managers_)
+            {
+                manager->Deliever(target_id_, message);
+            }
         }
         messages_delivered_.data[message.id] = std::time(nullptr);
         messages_delivered_.mutex.unlock();
@@ -264,7 +276,7 @@ std::optional<std::variant<PerfectLink::Message, PerfectLink::Ack>> PerfectLink:
         // Format: MSG <id> PAYLOAD <payload>
         try
         {
-            unsigned long id = std::stoul(msg.substr(5, 13));
+            unsigned long id = std::stoul(msg.substr(4, 10));
             return Message{id, msg.substr(23)};
         }
         catch (const std::exception &e)
@@ -277,7 +289,7 @@ std::optional<std::variant<PerfectLink::Message, PerfectLink::Ack>> PerfectLink:
         // Format: ACK <id>
         try
         {
-            unsigned long id = std::stoul(msg.substr(5, 13));
+            unsigned long id = std::stoul(msg.substr(4, 10));
             return Ack{id};
         }
         catch (const std::exception &e)
@@ -285,6 +297,8 @@ std::optional<std::variant<PerfectLink::Message, PerfectLink::Ack>> PerfectLink:
             return {};
         }
     }
-
-    return {};
+    else
+    {
+        return {};
+    }
 }

@@ -25,4 +25,10 @@ namespace drivers
      */
     void PerfectLinks(Parser &parser) noexcept;
 
+    /**
+     * @brief Responsible for executing
+     * the executing the perfect links algorithm
+     *
+     */
+    void FIFOBroadcast(Parser &parser) noexcept;
 } // namespace drivers

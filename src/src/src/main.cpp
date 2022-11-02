@@ -59,6 +59,9 @@ int main(int argc, char *argv[])
   case Parser::ExecMode::kPerfectLinks:
     drivers::PerfectLinks(parser);
     break;
+  case Parser::ExecMode::kFIFOBroadcast:
+    drivers::FIFOBroadcast(parser);
+    break;
   default:
     std::cerr << "Invalid execution mode." << std::endl;
     break;

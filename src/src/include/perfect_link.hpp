@@ -13,9 +13,9 @@
 #include <optional>
 #include <shared_mutex>
 
+#include "logger.hpp"
 #include "udp_server.hpp"
 #include "udp_client.hpp"
-#include "logger.hpp"
 
 class PerfectLink final : public UDPServer::Observer
 {
@@ -63,27 +63,36 @@ public:
         std::thread ack_thread_;
         std::thread send_thread_;
         std::atomic_bool on_{false};
+        
+        Logger &logger_;
         Shared<std::map<unsigned long int, std::unique_ptr<PerfectLink>>> perfect_links_;
 
     public:
-        Manager() noexcept = default;
+        explicit Manager(Logger& logger) noexcept : logger_(logger) {};
 
         virtual ~Manager() noexcept = default;
 
-        void Start() noexcept;
-        void Stop() noexcept;
-
         void Add(std::unique_ptr<PerfectLink> pl) noexcept;
 
-    private:
+        void Stop() noexcept;
+        void Start() noexcept;
+
+    protected:
         void SendAcks();
         void SendMessages();
+
+        virtual void Deliever(unsigned long long int sender_id, const Message &msg) = 0;
     };
 
     class BasicManager final : public Manager
     {
     public:
+        explicit BasicManager(Logger &logger) : Manager::Manager(logger) {}
+
         void Send(unsigned long long int receiver_id, const std::string &msg) noexcept;
+
+    protected:
+        void Deliever(unsigned long long int sender_id, const Message &msg) noexcept override;
     };
 
 private:
@@ -112,7 +121,7 @@ private:
     Shared<std::set<Message>> messages_to_send_{};
     Shared<std::map<Message::Id, time_t>> messages_delivered_{};
 
-    Logger &logger_;
+    std::vector<Manager *> managers_;
 
 public:
     PerfectLink() = delete;
@@ -124,10 +133,14 @@ public:
                 in_addr_t receiver_ip,
                 unsigned short receiver_port,
                 UDPServer &server,
-                UDPClient &client,
-                Logger &logger);
+                UDPClient &client);
 
-    void Send(const std::string &msg) noexcept;
+    Message::Id Send(const std::string &msg) noexcept;
+
+protected:
+    friend class PerfectLink::Manager;
+
+    void Subscribe(Manager* manager) noexcept;
 
 private:
     void SendAcks();
@@ -136,6 +149,4 @@ private:
 
     void Deliver(const std::string &msg) noexcept override;
     static std::optional<std::variant<Message, Ack>> Parse(const std::string &msg) noexcept;
-
-    friend class PerfectLink::Manager;
 };

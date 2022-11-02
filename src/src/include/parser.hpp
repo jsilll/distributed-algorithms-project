@@ -29,6 +29,7 @@ public:
   enum ExecMode
   {
     kPerfectLinks,
+    kFIFOBroadcast,
   };
 
 private:
@@ -47,7 +48,7 @@ private:
   unsigned long n_messages_{};
   unsigned long receiver_id_{};
 
-  ExecMode exec_mode_{kPerfectLinks};
+  ExecMode exec_mode_{kFIFOBroadcast};
 
 public:
   Parser(int argc, char const *const *argv, bool requires_config = true);

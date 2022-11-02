@@ -313,6 +313,10 @@ void Parser::ParseMode()
         {
             exec_mode_ = kPerfectLinks;
         }
+        else if (std::strcmp(argv_[9], "fifo") == 0)
+        {
+            exec_mode_ = kFIFOBroadcast;
+        }
         else
         {
             throw std::runtime_error("Invalid execution mode provided.");
@@ -475,6 +479,14 @@ void Parser::ParseConfigFile()
         }
 
         break;
+    case kFIFOBroadcast:
+        if (!(iss >> n_messages_))
+        {
+            std::ostringstream os;
+            os << "Parsing for `" << config_path() << "` failed at line 1";
+            throw std::invalid_argument(os.str());
+        }
+    break;
 
     default:
         throw std::runtime_error("Invalid execution mode.");

@@ -48,6 +48,7 @@ void UDPServer::Receive() noexcept
         sockaddr_in addr{};
         socklen_t len = sizeof(addr);
         ssize_t bytes = recvfrom(sockfd_, buffer, sizeof(buffer), 0, reinterpret_cast<sockaddr *>(&addr), &len);
+        buffer[bytes] = '\0';
         if (bytes > 0)
         {
             Notify(std::string(buffer), addr);
