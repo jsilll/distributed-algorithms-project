@@ -1,7 +1,5 @@
 #pragma once
 
-#include <sstream>
-
 #include "broadcast.hpp"
 
 class BestEffortBroadcast : public Broadcast
@@ -19,4 +17,8 @@ public:
 
 protected:
     void Deliever(unsigned long long int sender_id, const PerfectLink::Message &msg) noexcept override;
+
+private:
+    void LogSend(PerfectLink::Message::Id id) noexcept;
+    void LogDeliever(PerfectLink::Message::Id id) noexcept;
 };
