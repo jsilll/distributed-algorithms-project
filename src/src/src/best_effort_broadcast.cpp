@@ -1,37 +1,47 @@
 #include "best_effort_broadcast.hpp"
 
-#include <sstream>
-
-void BestEffortBroadcast::Send(const std::string &msg) noexcept
+Broadcast::Message::Id BestEffortBroadcast::Send(const std::string &msg) noexcept
 {
-    PerfectLink::Message::Id id{};
+    Broadcast::Message::Id message_id = n_messages_.fetch_add(1);
+
+    std::string message;
+
+    try
+    {
+        message = Broadcast::FormatMessage(id_, message_id, msg);
+    }
+    catch (const std::exception &e)
+    {
+        return message_id;
+    }
 
     perfect_links_.mutex.lock_shared();
     for (const auto &[pl_id, pl] : perfect_links_.data)
     {
-        id = pl->Send(msg);
+        pl->Send(message);
     }
     perfect_links_.mutex.unlock_shared();
 
-    if (log_) LogSend(id);
+    return message_id;
 }
-
 
 void BestEffortBroadcast::Deliever(unsigned long long int sender_id, const PerfectLink::Message &msg) noexcept
 {
-    if (log_) LogDeliever(id);
+    auto message = Parse(sender_id, msg.payload);
+
+    if (message.has_value())
+    {
+        // TODO: Do stuff here
+    }
+    else
+    {
+#ifdef DEBUG
+        std::cout << "Invalid Broadcast message received" << std::endl;
+#endif
+    }
 }
 
-void BestEffortBroadcast::LogSend(PerfectLink::Message::Id id) noexcept
+void BestEffortBroadcast::DelieverInternal(const Broadcast::Message &msg) noexcept
 {
-    std::stringstream ss;
-    ss << "b " << id;
-    logger_ << ss.str();
-}
-
-void BestEffortBroadcast::LogDeliever(PerfectLink::Message::Id id) noexcept
-{
-    std::stringstream ss;
-    ss << "d " << sender_id << " " << msg.id;
-    logger_ << ss.str();
+    // TODO: do something here
 }

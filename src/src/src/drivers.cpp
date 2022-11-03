@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "best_effort_broadcast.hpp"
+#include "fifo_broadcast.hpp"
 
 static std::optional<Logger> logger;
 static std::optional<UDPServer> server;
@@ -153,7 +153,7 @@ void drivers::FIFOBroadcast(Parser &parser) noexcept
         logger.emplace(parser.output_path());
         server.emplace(local_host.ip, local_host.port);
         client.emplace(server.value().sockfd());
-        manager = std::make_unique<BestEffortBroadcast>(logger.value(), true);
+        manager = std::make_unique<::FIFOBroadcast>(logger.value(), id, true);
     }
     catch (const std::exception &e)
     {
@@ -186,11 +186,11 @@ void drivers::FIFOBroadcast(Parser &parser) noexcept
     server.value().Start();
     manager->Start();
 
-    auto beb = dynamic_cast<BestEffortBroadcast *>(manager.get());
+    auto fifo = dynamic_cast<::FIFOBroadcast*>(manager.get());
 
     for (unsigned long i = 0; i < n_messages; ++i)
     {
-        beb->Send(std::to_string(i));
+        fifo->Send(std::to_string(i));
     }
 
     WaitForever();

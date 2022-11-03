@@ -277,7 +277,7 @@ std::optional<std::variant<PerfectLink::Message, PerfectLink::Ack>> PerfectLink:
         try
         {
             unsigned long id = std::stoul(msg.substr(4, 10));
-            return Message{id, msg.substr(23)};
+            return Message{id, msg.substr(kMsgPrefixSize)};
         }
         catch (const std::exception &e)
         {
