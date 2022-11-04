@@ -1,80 +1,43 @@
 #pragma once
 
-#include <sstream>
-
 #include "uniform_reliable_broadcast.hpp"
 
+/**
+ * @brief
+ *
+ */
 class FIFOBroadcast : public UniformReliableBroadcast
 {
-private:
-    bool log_;
-
 public:
-    explicit FIFOBroadcast(Logger &logger, unsigned long long id, bool log = false) noexcept
-        : UniformReliableBroadcast(logger, id), log_(log) {}
+    explicit FIFOBroadcast(Logger &logger, unsigned long long id) noexcept
+        : UniformReliableBroadcast(logger, id) {}
 
     ~FIFOBroadcast() noexcept override = default;
 
-    Broadcast::Message::Id Send(const std::string &msg) noexcept override
+protected:
+    void SendInternal(const Broadcast::Message &msg) noexcept override
     {
-        Broadcast::Message::Id id = UniformReliableBroadcast::Send(msg);
-
-        if (log_)
-        {
-            LogSend(id);
-        }
-
-        // TODO: Do stuff after
-
-        return id;
+        UniformReliableBroadcast::SendInternal(msg);
     }
 
-protected:
-    void Deliever(unsigned long long int sender_id, const PerfectLink::Message &msg) noexcept override
+    void NotifyInternal(const Broadcast::Message &msg) noexcept override
     {
-        auto message = Broadcast::Parse(sender_id, msg.payload);
-
-        if (message.has_value())
-        {
-            UniformReliableBroadcast::DelieverInternal(message.value());
-        }
-        else
-        {
-#ifdef DEBUG
-            std::cout << "Invalid Broadcast message received" << std::endl;
-#endif
-        }
-
-        if (log_)
-        {
-            LogDeliever(message.value());
-        }
-
-        // TODO: Do stuff after
+        UniformReliableBroadcast::NotifyInternal(msg);
     }
 
     /**
-     * @brief Used by subclasses
-     *
-     * @param msg
+     * @brief FIFO adds one more level of asychrony
+     * Instead of logging the message we are going to wait
+     * for other messages so that we can guarantee the FIFO property.
+     * 
+     * @param id 
+     * @param log 
      */
-    virtual void DelieverInternal(const Broadcast::Message &msg) noexcept
+    void DeliverInternal(const Broadcast::Message::Id &id, bool log = false) noexcept override
     {
-        UniformReliableBroadcast::DelieverInternal(msg);
-    }
-
-private:
-    void LogSend(const Broadcast::Message::Id id) noexcept
-    {
-        std::stringstream ss;
-        ss << "b " << id;
-        logger_ << ss.str();
-    }
-
-    void LogDeliever(const Broadcast::Message &msg) noexcept
-    {
-        std::stringstream ss;
-        ss << "d " << msg.sender_id << " " << msg.id;
-        logger_ << ss.str();
+        if (log)
+        {
+            LogDeliver(id);
+        }
     }
 };

@@ -45,7 +45,7 @@ private:
   std::vector<Host> hosts_;
 
   unsigned long id_{};
-  unsigned long n_messages_{};
+  unsigned long n_messages_sent_{};
   unsigned long receiver_id_{};
 
   ExecMode exec_mode_{kFIFOBroadcast};

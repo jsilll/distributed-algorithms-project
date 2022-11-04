@@ -2,6 +2,18 @@
 
 #include "broadcast.hpp"
 
+/**
+ * @brief
+ * BEB1 Best effort validity: For any two processes pi and pj. If pi
+ * and pj are correct, then every message broadcast by pi, is eventually
+ * delivered by pj.
+ *
+ * BEB2 No duplication: No message is delivered more than once
+ *
+ * BEB3 No creation: If a message is delivered by some process pj, then
+ * m was previously broadcast by some process pi.
+ *
+ */
 class BestEffortBroadcast : public Broadcast
 {
 public:
@@ -10,15 +22,34 @@ public:
 
     ~BestEffortBroadcast() noexcept override = default;
 
-    Broadcast::Message::Id Send(const std::string &msg) noexcept override;
-
 protected:
-    void Deliever(unsigned long long int sender_id, const PerfectLink::Message &msg) noexcept override;
+    void SendInternal(const Broadcast::Message &msg) noexcept override
+    {
+        perfect_links_.mutex.lock_shared();
+        std::vector<PerfectLink *> pls;
+        pls.reserve(perfect_links_.data.size());
+        for (const auto &[_, pl] : perfect_links_.data)
+        {
+            pls.emplace_back(pl.get());
+        }
+        perfect_links_.mutex.unlock_shared();
 
-    /**
-     * @brief Used by subclasses 
-     * 
-     * @param msg 
-     */
-    virtual void DelieverInternal(const Broadcast::Message &msg) noexcept;
+        for (const auto pl : pls)
+        {
+            pl->Send(Format(msg));
+        }
+    }
+
+    void NotifyInternal(const Broadcast::Message &msg) noexcept override
+    {
+        BestEffortBroadcast::DeliverInternal(msg.id);
+    }
+
+    void DeliverInternal(const Broadcast::Message::Id &id, bool log = false) noexcept override
+    {
+        if (log)
+        {
+            LogDeliver(id);
+        }
+    }
 };

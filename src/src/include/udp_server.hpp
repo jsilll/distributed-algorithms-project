@@ -12,6 +12,8 @@
 #include <shared_mutex>
 #include <sys/socket.h>
 
+#include "shared.hpp"
+
 class UDPClient;
 
 class UDPServer
@@ -24,7 +26,7 @@ public:
     protected:
         virtual ~Observer() = default;
 
-        virtual void Deliver(const std::string &msg) = 0;
+        virtual void Notify(const std::string &msg) = 0;
     };
 
     struct Machine
@@ -36,13 +38,6 @@ public:
     static constexpr int kMaxMsgSize = 1024;
 
 private:
-    template <typename T>
-    struct Shared
-    {
-        T data{};
-        std::shared_mutex mutex{};
-    };
-
     int sockfd_;
     sockaddr_in server_addr_;
     std::atomic_bool on_{false};
@@ -67,7 +62,7 @@ private:
 
     void Receive() noexcept;
 
-    void Notify(const std::string &msg, sockaddr_in addr);
+    void NotifyAll(const std::string &msg, sockaddr_in addr);
 };
 
 inline bool operator<(UDPServer::Machine m1, UDPServer::Machine m2) noexcept

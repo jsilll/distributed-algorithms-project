@@ -43,13 +43,7 @@ public:
         }
     };
 
-private:
-    template <typename T>
-    struct Shared
-    {
-        T data{};
-        std::shared_mutex mutex{};
-    };
+    typedef unsigned long int Id;
 
 public:
     class Manager
@@ -60,12 +54,14 @@ public:
         static constexpr int kFinishSendingAllAcksMs = 250;
         static constexpr int kFinishSendingAllMsgsMs = 250;
 
+        std::atomic<Id> n_peers_{0};
+
         std::thread ack_thread_;
         std::thread send_thread_;
         std::atomic_bool on_{false};
         
         Logger &logger_;
-        Shared<std::map<unsigned long int, std::unique_ptr<PerfectLink>>> perfect_links_;
+        Shared<std::map<Id, std::unique_ptr<PerfectLink>>> perfect_links_;
 
     public:
         explicit Manager(Logger& logger) noexcept : logger_(logger) {};
@@ -74,14 +70,14 @@ public:
 
         void Add(std::unique_ptr<PerfectLink> pl) noexcept;
 
-        void Stop() noexcept;
-        void Start() noexcept;
+        virtual void Stop() noexcept;
+        virtual void Start() noexcept;
 
     protected:
         void SendAcks();
         void SendMessages();
 
-        virtual void Deliever(unsigned long long int sender_id, const Message &msg) = 0;
+        virtual void Notify(unsigned long long int sender_id, const Message &msg) = 0;
     };
 
     class BasicManager final : public Manager
@@ -92,7 +88,7 @@ public:
         void Send(unsigned long long int receiver_id, const std::string &msg) noexcept;
 
     protected:
-        void Deliever(unsigned long long int sender_id, const Message &msg) noexcept override;
+        void Notify(unsigned long long int sender_id, const Message &msg) noexcept override;
     };
 
 private:
@@ -107,12 +103,12 @@ private:
     static constexpr double kStopSendingAcksTimeoutSec = static_cast<double>(Manager::kFinishSendingAllMsgsMs + 250 + 100) / 1000.0;
 
 private:
-    const unsigned long int id_;
+    const Id id_;
 
-    const unsigned long int target_id_;
+    const Id target_id_;
     const sockaddr_in target_addr_;
 
-    std::atomic<Message::Id> n_messages_{1};
+    std::atomic<Message::Id> n_messages_sent_{1};
 
     UDPClient &client_;
     UDPServer &server_;
@@ -147,6 +143,6 @@ private:
     void CleanAcks() noexcept;
     void SendMessages();
 
-    void Deliver(const std::string &msg) noexcept override;
+    void Notify(const std::string &msg) noexcept override;
     static std::optional<std::variant<Message, Ack>> Parse(const std::string &msg) noexcept;
 };

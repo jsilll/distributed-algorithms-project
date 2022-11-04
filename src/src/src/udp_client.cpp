@@ -17,8 +17,8 @@ UDPClient::UDPClient()
     }
 }
 
-UDPClient::UDPClient(int sockfd)
-    : sockfd_(sockfd)
+UDPClient::UDPClient(int sockfd, bool sock_owner)
+    : sockfd_(sockfd), sock_owner_(sock_owner)
 {
     if (sockfd_ < 0)
     {

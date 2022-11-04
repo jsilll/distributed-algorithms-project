@@ -1,17 +1,14 @@
 #include "parser.hpp"
 
-#include <iostream>
-#include <sstream>
-#include <string>
-#include <vector>
-
-#include <algorithm>
 #include <cctype>
-
+#include <vector>
+#include <string>
+#include <cstring>
+#include <sstream>
+#include <iostream>
+#include <algorithm>
 #include <arpa/inet.h>
 #include <sys/socket.h>
-
-#include <cstring>
 
 inline void LeftTrim(std::string &s)
 {
@@ -185,7 +182,7 @@ unsigned long Parser::id() const
 unsigned long Parser::n_messages() const
 {
     CheckParsed();
-    return n_messages_;
+    return n_messages_sent_;
 }
 
 unsigned long Parser::target_id() const
@@ -471,7 +468,7 @@ void Parser::ParseConfigFile()
     switch (exec_mode_)
     {
     case kPerfectLinks:
-        if (!(iss >> n_messages_ >> receiver_id_))
+        if (!(iss >> n_messages_sent_ >> receiver_id_))
         {
             std::ostringstream os;
             os << "Parsing for `" << config_path() << "` failed at line 1";
@@ -480,7 +477,7 @@ void Parser::ParseConfigFile()
 
         break;
     case kFIFOBroadcast:
-        if (!(iss >> n_messages_))
+        if (!(iss >> n_messages_sent_))
         {
             std::ostringstream os;
             os << "Parsing for `" << config_path() << "` failed at line 1";

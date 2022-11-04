@@ -31,10 +31,13 @@ void PerfectLink::Manager::Stop() noexcept
 void PerfectLink::Manager::Add(std::unique_ptr<PerfectLink> pl) noexcept
 {
     const unsigned long long id = pl->target_id_;
+
     perfect_links_.mutex.lock();
     perfect_links_.data[id] = std::move(pl);
     perfect_links_.data[id]->Subscribe(this);
     perfect_links_.mutex.unlock();
+
+    n_peers_.fetch_add(1);
 }
 
 void PerfectLink::Manager::SendAcks()
@@ -42,11 +45,18 @@ void PerfectLink::Manager::SendAcks()
     while (on_.load())
     {
         perfect_links_.mutex.lock_shared();
-        for (const auto &pl : perfect_links_.data)
+        std::vector<PerfectLink *> pls;
+        pls.reserve(perfect_links_.data.size());
+        for (const auto &[_, pl] : perfect_links_.data)
         {
-            pl.second->SendAcks();
+            pls.push_back(pl.get());
         }
         perfect_links_.mutex.unlock_shared();
+
+        for (const auto &pl : pls)
+        {
+            pl->SendAcks();
+        }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(kFinishSendingAllAcksMs));
     }
@@ -57,11 +67,18 @@ void PerfectLink::Manager::SendMessages()
     while (on_.load())
     {
         perfect_links_.mutex.lock_shared();
-        for (const auto &pl : perfect_links_.data)
+        std::vector<PerfectLink *> pls;
+        pls.reserve(perfect_links_.data.size());
+        for (const auto &[_, pl] : perfect_links_.data)
         {
-            pl.second->SendMessages();
+            pls.push_back(pl.get());
         }
         perfect_links_.mutex.unlock_shared();
+
+        for (const auto &pl : pls)
+        {
+            pl->SendMessages();
+        }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(kFinishSendingAllMsgsMs));
     }
@@ -80,7 +97,7 @@ void PerfectLink::BasicManager::Send(unsigned long long int receiver_id, const s
     perfect_links_.mutex.unlock_shared();
 }
 
-void PerfectLink::BasicManager::Deliever(unsigned long long int sender_id, const Message &msg) noexcept
+void PerfectLink::BasicManager::Notify(unsigned long long int sender_id, const Message &msg) noexcept
 {
     std::stringstream ss;
     ss << "d " << sender_id << " " << msg.id;
@@ -101,10 +118,10 @@ PerfectLink::PerfectLink(unsigned long int id,
 
 PerfectLink::Message::Id PerfectLink::Send(const std::string &msg) noexcept
 {
-    Message::Id id = n_messages_.fetch_add(1);
+    Message::Id id = n_messages_sent_.fetch_add(1);
 
     messages_to_send_.mutex.lock();
-    messages_to_send_.data.insert(Message{id, msg});
+    messages_to_send_.data.insert({id, msg});
     messages_to_send_.mutex.unlock();
 
     return id;
@@ -190,7 +207,6 @@ void PerfectLink::SendMessages()
         char buffer[UDPServer::kMaxMsgSize];
         if (std::snprintf(buffer, sizeof(buffer), "MSG %010lu PAYLOAD %s", msg.id, msg.payload.c_str()) <= 0)
         {
-            // TODO: how to handle this exception?
             messages_to_send_.mutex.unlock_shared();
             throw std::runtime_error("Error during formatting.");
         }
@@ -211,7 +227,7 @@ void PerfectLink::SendMessages()
     messages_to_send_.mutex.unlock_shared();
 }
 
-void PerfectLink::Deliver(const std::string &msg) noexcept
+void PerfectLink::Notify(const std::string &msg) noexcept
 {
     auto parsed_msg = Parse(msg);
 
@@ -233,14 +249,19 @@ void PerfectLink::Deliver(const std::string &msg) noexcept
         acks_to_send_.mutex.unlock();
 
         messages_delivered_.mutex.lock();
-        if (messages_delivered_.data.find(message.id) == messages_delivered_.data.end())
+        bool unseen = messages_delivered_.data.find(message.id) == messages_delivered_.data.end();
+        messages_delivered_.mutex.unlock();
+
+        if (unseen)
         {
             // Its an unseen message
             for (const auto manager : managers_)
             {
-                manager->Deliever(target_id_, message);
+                manager->Notify(target_id_, message);
             }
         }
+
+        messages_delivered_.mutex.lock();
         messages_delivered_.data[message.id] = std::time(nullptr);
         messages_delivered_.mutex.unlock();
     }

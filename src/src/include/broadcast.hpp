@@ -8,28 +8,36 @@ class Broadcast : public PerfectLink::Manager
 public:
     struct Message
     {
-        typedef unsigned long int Id;
+        struct Id
+        {
+            typedef unsigned long int Seq;
+
+            Seq seq;
+            PerfectLink::Id author;
+
+            inline bool friend operator<(const Id &id1, const Id &id2) noexcept 
+            {
+                if (id1.seq != id2.seq)
+                {
+                    return id1.seq < id2.seq;
+                }
+                
+                return id1.author < id2.author;
+            }
+        };
 
         Id id;
-        unsigned long int author_id;
-        unsigned long int sender_id;
+        PerfectLink::Id sender;
 
         std::string payload;
-
-        inline friend bool operator<(const Message &m1, const Message &m2) noexcept
-        {
-            if (m1.id != m2.id) return m1.id < m2.id;
-            if (m1.author_id != m2.author_id) return m1.author_id < m2.author_id;
-            return m1.sender_id < m2.sender_id;
-        }
     };
 
 private:
-    static constexpr int kMsgPrefixSize = 41;
+    static constexpr int kMsgPrefixSize = 42;
 
 protected:
-    unsigned long long id_;
-    std::atomic<Message::Id> n_messages_{1};
+    PerfectLink::Id id_;
+    std::atomic<Message::Id::Seq> n_messages_sent_{1};
 
 public:
     explicit Broadcast(Logger &logger, unsigned long long id) noexcept
@@ -37,13 +45,30 @@ public:
 
     ~Broadcast() noexcept override = default;
 
-    virtual Message::Id Send(const std::string &msg) = 0;
+    void Send(const std::string &msg) noexcept;
 
-    std::string FormatMessage(unsigned long int author_id, unsigned long int id, const std::string &payload)
+protected:
+    void Notify(unsigned long long int sender_id, const PerfectLink::Message &msg) noexcept final;
+
+protected:
+    virtual void SendInternal(const Broadcast::Message &msg) = 0;
+
+    virtual void NotifyInternal(const Broadcast::Message &msg) = 0;
+
+    virtual void DeliverInternal(const Broadcast::Message::Id &id, bool log) = 0; 
+
+private:
+    void LogSend(const Broadcast::Message::Id::Seq seq) noexcept;
+
+protected:
+    void LogDeliver(const Broadcast::Message::Id &id) noexcept;
+
+public:
+    static std::string Format(const Message &msg)
     {
         char buffer[UDPServer::kMaxMsgSize];
 
-        if (std::snprintf(buffer, sizeof(buffer), "BRO AID %010llu ID %010lu PAYLOAD %s", id_, id, payload.c_str()) <= 0)
+        if (std::snprintf(buffer, sizeof(buffer), "BRO AID %010lu SEQ %010lu PAYLOAD %s", msg.id.author, msg.id.seq, msg.payload.c_str()) <= 0)
         {
             throw std::runtime_error("Error during formatting.");
         }
@@ -54,15 +79,14 @@ public:
     static std::optional<Message> Parse(unsigned long long sender_id, const std::string &msg) noexcept
     {
         // BRO AID 0000000000 ID 0000000000 PAYLOAD
-        if (msg.size() > kMsgPrefixSize && msg.substr(0, 3) == "BRO"
-        && msg.substr(4, 3) == "AID" && msg.substr(19, 2) == "ID" 
-        && msg.substr(33, 7) == "PAYLOAD") 
+        if (msg.size() > kMsgPrefixSize && msg.substr(0, 3) == "BRO" && msg.substr(4, 3) == "AID" &&
+            msg.substr(19, 3) == "SEQ" && msg.substr(34, 7) == "PAYLOAD")
         {
             try
             {
                 unsigned long aid = std::stoul(msg.substr(8, 10));
-                unsigned long id = std::stoul(msg.substr(22, 10));
-                return {{id, aid, sender_id, msg.substr(kMsgPrefixSize)}};
+                unsigned long seq = std::stoul(msg.substr(23, 10));
+                return {{{seq, aid}, sender_id, msg.substr(kMsgPrefixSize)}};
             }
             catch (const std::exception &e)
             {

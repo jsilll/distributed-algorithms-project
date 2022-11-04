@@ -153,13 +153,15 @@ void drivers::FIFOBroadcast(Parser &parser) noexcept
         logger.emplace(parser.output_path());
         server.emplace(local_host.ip, local_host.port);
         client.emplace(server.value().sockfd());
-        manager = std::make_unique<::FIFOBroadcast>(logger.value(), id, true);
+        manager = std::make_unique<::FIFOBroadcast>(logger.value(), id);
     }
     catch (const std::exception &e)
     {
         std::cerr << e.what() << '\n';
         std::exit(EXIT_FAILURE);
     }
+
+    auto fifo = dynamic_cast<::FIFOBroadcast*>(manager.get());
 
     for (const auto &peer : hosts)
     {
@@ -173,7 +175,7 @@ void drivers::FIFOBroadcast(Parser &parser) noexcept
                                                         peer.port,
                                                         server.value(),
                                                         client.value());
-                manager->Add(std::move(pl));
+                fifo->Add(std::move(pl));
             }
             catch (const std::exception &e)
             {
@@ -184,9 +186,7 @@ void drivers::FIFOBroadcast(Parser &parser) noexcept
     }
 
     server.value().Start();
-    manager->Start();
-
-    auto fifo = dynamic_cast<::FIFOBroadcast*>(manager.get());
+    fifo->Start();
 
     for (unsigned long i = 0; i < n_messages; ++i)
     {

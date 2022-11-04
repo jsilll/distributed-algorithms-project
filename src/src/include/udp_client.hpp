@@ -12,12 +12,12 @@ class UDPClient
 {
 private:
     int sockfd_;
-    bool sock_owner_{};
+    bool sock_owner_;
 
 public:
     UDPClient();
 
-    explicit UDPClient(int sockfd);
+    explicit UDPClient(int sockfd, bool sock_owner = false);
 
     ~UDPClient() noexcept;
 
