@@ -1,7 +1,5 @@
 #pragma once
 
-#include <set>
-#include <map>
 #include <list>
 #include <ctime>
 #include <mutex>
@@ -12,6 +10,7 @@
 #include <variant>
 #include <optional>
 #include <shared_mutex>
+#include <unordered_map>
 
 #include "logger.hpp"
 #include "udp_server.hpp"
@@ -61,7 +60,7 @@ public:
         std::atomic_bool on_{false};
         
         Logger &logger_;
-        Shared<std::map<Id, std::unique_ptr<PerfectLink>>> perfect_links_;
+        Shared<std::unordered_map<Id, std::unique_ptr<PerfectLink>>> perfect_links_;
 
     public:
         explicit Manager(Logger& logger) noexcept : logger_(logger) {};
@@ -113,9 +112,9 @@ private:
     UDPClient &client_;
     UDPServer &server_;
 
-    Shared<std::set<Ack>> acks_to_send_{};
-    Shared<std::set<Message>> messages_to_send_{};
-    Shared<std::map<Message::Id, time_t>> messages_delivered_{};
+    Shared<std::unordered_set<Ack>> acks_to_send_{};
+    Shared<std::unordered_set<Message>> messages_to_send_{};
+    Shared<std::unordered_map<Message::Id, time_t>> messages_delivered_{};
 
     std::vector<Manager *> managers_;
 

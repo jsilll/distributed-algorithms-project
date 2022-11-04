@@ -11,6 +11,7 @@
 #include <arpa/inet.h>
 #include <shared_mutex>
 #include <sys/socket.h>
+#include <unordered_map>
 
 #include "shared.hpp"
 
@@ -44,7 +45,7 @@ private:
 
     std::thread receive_thread_;
 
-    Shared<std::map<Machine, std::vector<Observer *>>> observers_;
+    Shared<std::unordered_map<Machine, std::vector<Observer *>>> observers_;
 
 public:
     UDPServer(in_addr_t ip, in_port_t port);

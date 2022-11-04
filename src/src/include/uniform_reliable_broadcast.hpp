@@ -20,10 +20,11 @@ protected:
     static constexpr int kFinishDeliveringAllMs = 250;
 
 protected:
+    Shared<std::unordered_set<Broadcast::Message::Id>> pending_;
+    Shared<std::unordered_set<Broadcast::Message::Id>> delivered_;
+    Shared<std::unordered_map<Message::Id, std::unordered_set<PerfectLink::Id>>> ack_;
+
     std::thread deliver_thread_;
-    Shared<std::set<Broadcast::Message::Id>> pending_;
-    Shared<std::set<Broadcast::Message::Id>> delivered_;
-    Shared<std::map<Message::Id, std::set<PerfectLink::Id>>> ack_;
 
 public:
     explicit UniformReliableBroadcast(Logger &logger, unsigned long long id) noexcept
@@ -65,10 +66,14 @@ protected:
         ack_.mutex.unlock();
 
         pending_.mutex.lock_shared();
-        bool not_seen = pending_.data.count(msg.id) == 0;
+        bool not_pending = pending_.data.count(msg.id) == 0;
         pending_.mutex.unlock_shared();
 
-        if (not_seen)
+        delivered_.mutex.lock_shared();
+        bool not_delivered = delivered_.data.count(msg.id) == 0;
+        delivered_.mutex.unlock_shared();
+
+        if (not_pending && not_delivered)
         {
             pending_.mutex.lock();
             pending_.data.insert(msg.id);

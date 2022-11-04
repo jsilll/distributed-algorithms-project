@@ -1,13 +1,24 @@
 #pragma once
 
+#include <unordered_set>
+
 #include "uniform_reliable_broadcast.hpp"
 
 /**
  * @brief
  *
  */
-class FIFOBroadcast : public UniformReliableBroadcast
+class FIFOBroadcast final : public UniformReliableBroadcast
 {
+private:
+    struct PeerState {
+        Broadcast::Message::Id next;
+        std::unordered_set<Broadcast::Message::Id> pending;
+    };
+
+private:
+    std::unordered_map<PerfectLink::Id, PeerState> peer_state_;
+
 public:
     explicit FIFOBroadcast(Logger &logger, unsigned long long id) noexcept
         : UniformReliableBroadcast(logger, id) {}
@@ -15,12 +26,12 @@ public:
     ~FIFOBroadcast() noexcept override = default;
 
 protected:
-    void SendInternal(const Broadcast::Message &msg) noexcept override
+    void SendInternal(const Broadcast::Message &msg) noexcept final
     {
         UniformReliableBroadcast::SendInternal(msg);
     }
 
-    void NotifyInternal(const Broadcast::Message &msg) noexcept override
+    void NotifyInternal(const Broadcast::Message &msg) noexcept final
     {
         UniformReliableBroadcast::NotifyInternal(msg);
     }
@@ -33,7 +44,7 @@ protected:
      * @param id 
      * @param log 
      */
-    void DeliverInternal(const Broadcast::Message::Id &id, bool log = false) noexcept override
+    void DeliverInternal(const Broadcast::Message::Id &id, bool log = false) noexcept final
     {
         if (log)
         {
