@@ -53,18 +53,23 @@ protected:
         {
             if (seq > state.next)
             {
-                std::cout << "if 1\n";
                 break;
             }
             else
             {
-                std::cout << "if 2\n";
-                ++state.next;
+                if (seq > state.next)
+                {
+                    break;
+                }
+
                 to_remove.emplace_back(seq);
+
                 if (log)
                 {
-                    LogDeliver(id);
+                    LogDeliver({seq, id.author});
                 }
+
+                state.next++;
             }
         }
 
