@@ -124,16 +124,15 @@ protected:
             {
                 break;
             }
-            else
-            {
-                state.next++;
-                to_remove.emplace_back(seq);
 
-                if (log)
-                {
-                    LogDeliver(id);
-                }
+            to_remove.emplace_back(seq);
+
+            if (log)
+            {
+                LogDeliver({seq, id.author});
             }
+
+            state.next++;
         }
 
         for (const auto seq : to_remove)
