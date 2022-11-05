@@ -47,7 +47,7 @@ public:
         static constexpr int kFinishSendingAllAcksMs = 250;
         static constexpr int kFinishSendingAllMsgsMs = 250;
 
-        std::atomic<Id> n_peers_{0};
+        std::atomic<Id> n_processes_{1};
 
         std::thread ack_thread_;
         std::thread send_thread_;

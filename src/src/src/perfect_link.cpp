@@ -37,7 +37,7 @@ void PerfectLink::Manager::Add(std::unique_ptr<PerfectLink> pl) noexcept
     perfect_links_.data[id]->Subscribe(this);
     perfect_links_.mutex.unlock();
 
-    n_peers_.fetch_add(1);
+    n_processes_.fetch_add(1);
 }
 
 void PerfectLink::Manager::SendAcks()

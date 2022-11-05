@@ -16,9 +16,12 @@
  */
 class BestEffortBroadcast : public Broadcast
 {
+private:
+    bool deliver_to_upper_layer_;
+
 public:
-    explicit BestEffortBroadcast(Logger &logger, unsigned long long id) noexcept
-        : Broadcast(logger, id) {}
+    explicit BestEffortBroadcast(Logger &logger, unsigned long long id, bool deliver_to_upper_layer = false) noexcept
+        : Broadcast(logger, id), deliver_to_upper_layer_(deliver_to_upper_layer) {}
 
     ~BestEffortBroadcast() noexcept override = default;
 
@@ -29,9 +32,7 @@ protected:
         std::vector<PerfectLink *> pls;
         pls.reserve(perfect_links_.data.size());
         for (const auto &[_, pl] : perfect_links_.data)
-        {
             pls.emplace_back(pl.get());
-        }
         perfect_links_.mutex.unlock_shared();
 
         for (const auto pl : pls)
@@ -42,7 +43,14 @@ protected:
 
     void NotifyInternal(const Broadcast::Message &msg) noexcept override
     {
-        BestEffortBroadcast::DeliverInternal(msg.id);
+        if (deliver_to_upper_layer_)
+        {
+            DeliverInternal(msg.id, true);
+        }
+        else
+        {
+            BestEffortBroadcast::DeliverInternal(msg.id);
+        }
     }
 
     void DeliverInternal(const Broadcast::Message::Id &id, bool log = false) noexcept override

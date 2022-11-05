@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 #include "best_effort_broadcast.hpp"
 
 /**
@@ -79,7 +81,7 @@ protected:
             pending_.data.insert(msg.id);
             pending_.mutex.unlock();
 #ifdef DEBUG
-            std::cout << "[DBUG] URB Relaying: " << msg.id.author << msg.id.seq << "\n";
+            std::cout << "[DBUG] URB Relaying: " << msg.id.author << " " << msg.id.seq << "\n";
 #endif
             BestEffortBroadcast::SendInternal(msg);
         }
@@ -108,7 +110,7 @@ private:
             for (const auto id : pending_messages)
             {
                 ack_.mutex.lock();
-                bool majority_seen = ack_.data[id].size() > (n_peers_.load() / 2);
+                bool majority_seen = (ack_.data[id].size() + 1) > static_cast<std::size_t>(std::floor(n_processes_.load() / 2));
                 ack_.mutex.unlock();
 
                 delivered_.mutex.lock_shared();
