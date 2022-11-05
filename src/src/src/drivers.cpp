@@ -161,7 +161,7 @@ void drivers::FIFOBroadcast(Parser &parser) noexcept
         std::exit(EXIT_FAILURE);
     }
 
-    auto fifo = dynamic_cast<::UniformReliableBroadcast*>(manager.get());
+    auto fifo = dynamic_cast<::UniformFIFOBroadcast*>(manager.get());
 
     for (const auto &peer : hosts)
     {
