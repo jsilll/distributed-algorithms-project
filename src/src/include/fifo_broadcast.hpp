@@ -11,9 +11,10 @@
 class FIFOBroadcast final : public UniformReliableBroadcast
 {
 private:
-    struct PeerState {
-        Broadcast::Message::Id next;
-        std::unordered_set<Broadcast::Message::Id> pending;
+    struct PeerState
+    {
+        Broadcast::Message::Id::Seq next{1};
+        std::set<Broadcast::Message::Id::Seq> pending;
     };
 
 private:
@@ -38,17 +39,38 @@ protected:
 
     /**
      * @brief FIFO adds one more level of asychrony
-     * Instead of logging the message we are going to wait
-     * for other messages so that we can guarantee the FIFO property.
-     * 
-     * @param id 
-     * @param log 
+     * Instead of logging the message right away we wait
+     * for the missing messages so that we guarantee the FIFO property.
+     *
+     * @param id
+     * @param log
      */
     void DeliverInternal(const Broadcast::Message::Id &id, bool log = false) noexcept final
     {
-        if (log)
+        auto &state = peer_state_[id.author];
+
+        std::vector<Message::Id::Seq> to_remove;
+        to_remove.reserve(state.pending.size());
+
+        state.pending.insert(id.seq);
+        for (const auto seq : state.pending)
         {
-            LogDeliver(id);
+            if (seq > state.next)
+            {
+                break;
+            }
+            else
+            {
+                state.next++;
+                to_remove.emplace_back(seq);
+
+                if (log)
+                {
+                    LogDeliver(id);
+                }
+            }
         }
+
+        for (const auto seq : to_remove) state.pending.erase(seq);
     }
 };

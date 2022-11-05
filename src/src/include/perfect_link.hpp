@@ -1,5 +1,6 @@
 #pragma once
 
+#include <set>
 #include <list>
 #include <ctime>
 #include <mutex>
@@ -11,6 +12,7 @@
 #include <optional>
 #include <shared_mutex>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "logger.hpp"
 #include "udp_server.hpp"
@@ -19,6 +21,8 @@
 class PerfectLink final : public UDPServer::Observer
 {
 public:
+    typedef unsigned long int Id;
+
     struct Message
     {
         typedef unsigned long int Id;
@@ -32,17 +36,7 @@ public:
         }
     };
 
-    struct Ack
-    {
-        Message::Id id;
-
-        inline friend bool operator<(Ack ack1, Ack ack2) noexcept
-        {
-            return ack1.id < ack2.id;
-        }
-    };
-
-    typedef unsigned long int Id;
+    typedef Message::Id Ack;
 
 public:
     class Manager
@@ -112,9 +106,9 @@ private:
     UDPClient &client_;
     UDPServer &server_;
 
-    Shared<std::unordered_set<Ack>> acks_to_send_{};
-    Shared<std::unordered_set<Message>> messages_to_send_{};
-    Shared<std::unordered_map<Message::Id, time_t>> messages_delivered_{};
+    Shared<std::unordered_set<Ack>> acks_to_send_;
+    Shared<std::set<Message>> messages_to_send_;
+    Shared<std::unordered_map<Message::Id, time_t>> messages_delivered_;
 
     std::vector<Manager *> managers_;
 

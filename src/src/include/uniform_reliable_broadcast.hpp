@@ -20,9 +20,9 @@ protected:
     static constexpr int kFinishDeliveringAllMs = 250;
 
 protected:
-    Shared<std::unordered_set<Broadcast::Message::Id>> pending_;
-    Shared<std::unordered_set<Broadcast::Message::Id>> delivered_;
-    Shared<std::unordered_map<Message::Id, std::unordered_set<PerfectLink::Id>>> ack_;
+    Shared<std::set<Broadcast::Message::Id>> pending_;
+    Shared<std::set<Broadcast::Message::Id>> delivered_;
+    Shared<std::map<Message::Id, std::unordered_set<PerfectLink::Id>>> ack_;
 
     std::thread deliver_thread_;
 

@@ -141,10 +141,10 @@ void PerfectLink::SendAcks()
         return;
     }
 
-    for (auto &ack : acks_to_send_.data)
+    for (auto &ack_id : acks_to_send_.data)
     {
         char buffer[kAckSize + 1];
-        if (std::snprintf(buffer, sizeof(buffer), "ACK %010lu", ack.id) <= 0)
+        if (std::snprintf(buffer, sizeof(buffer), "ACK %010lu", ack_id) <= 0)
         {
             acks_to_send_.mutex.unlock_shared();
             throw std::runtime_error("Error during formatting.");
@@ -154,7 +154,7 @@ void PerfectLink::SendAcks()
         {
             [[maybe_unused]] ssize_t bytes = client_.Send(std::string(buffer), target_addr_);
 #ifdef DEBUG
-            std::cout << "[DBUG] Sending Ack " << ack.id << " To Process " << target_id_ << "\n";
+            std::cout << "[DBUG] Sending Ack " << ack_id << " To Process " << target_id_ << "\n";
 #endif
         }
         catch (const std::exception &e)
@@ -268,22 +268,22 @@ void PerfectLink::Notify(const std::string &msg) noexcept
     else
     {
         // Received an Ack
-        Ack ack = std::get<1>(parsed_msg.value());
+        Ack ack_id = std::get<1>(parsed_msg.value());
 
 #ifdef DEBUG
-        std::cout << "[DBUG] Received Ack for Message " << ack.id << "\n";
+        std::cout << "[DBUG] Received Ack for Message " << ack_id << "\n";
 #endif
 
         messages_to_send_.mutex.lock();
-        auto message = messages_to_send_.data.find(Message{ack.id, {}});
+        auto message = messages_to_send_.data.find(Message{ack_id, {}});
         if (message != messages_to_send_.data.end())
         {
 #ifdef DEBUG
-            std::cout << "[DBUG] Successfully Sent Message " << ack.id << " To Process " << target_id_ << ": '" << (*message).payload << "'" << std::endl;
+            std::cout << "[DBUG] Successfully Sent Message " << ack_id << " To Process " << target_id_ << ": '" << (*message).payload << "'" << std::endl;
 #endif
             // If we were sending this message,
             // then stop sending it peer has received
-            messages_to_send_.data.erase({ack.id, {}});
+            messages_to_send_.data.erase({ack_id, {}});
         }
         // [else] We've seen this ack before, ignore it
         messages_to_send_.mutex.unlock();

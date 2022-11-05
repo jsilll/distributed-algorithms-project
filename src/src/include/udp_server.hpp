@@ -45,7 +45,7 @@ private:
 
     std::thread receive_thread_;
 
-    Shared<std::unordered_map<Machine, std::vector<Observer *>>> observers_;
+    Shared<std::map<Machine, std::vector<Observer *>>> observers_;
 
 public:
     UDPServer(in_addr_t ip, in_port_t port);
