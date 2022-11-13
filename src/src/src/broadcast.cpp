@@ -5,13 +5,14 @@
 void Broadcast::Send(const std::string &msg) noexcept
 {
     Message message = {{n_messages_sent_.fetch_add(1), id_}, id_, msg};
-    SendInternal(message); // Virtual
+    SendInternal(message); // Virtual Call
     LogSend(message.id.seq);
 }
 
 void Broadcast::Notify(unsigned long long int sender_id, const PerfectLink::Message &msg) noexcept
 {
     auto message = Parse(sender_id, msg.payload);
+
     if (message.has_value())
     {
         NotifyInternal(message.value());

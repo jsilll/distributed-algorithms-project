@@ -34,6 +34,19 @@ public:
         {
             return m1.id < m2.id;
         }
+
+        inline friend bool operator==(const Message &m1, const Message &m2) noexcept
+        {
+            return m1.id == m2.id;
+        }
+
+        struct Hash
+        {
+            inline std::size_t operator()(const Message &m) const noexcept
+            {
+                return std::hash<Id>{}(m.id);
+            }
+        };
     };
 
     typedef Message::Id Ack;
@@ -52,12 +65,12 @@ public:
         std::thread ack_thread_;
         std::thread send_thread_;
         std::atomic_bool on_{false};
-        
+
         Logger &logger_;
         Shared<std::unordered_map<Id, std::unique_ptr<PerfectLink>>> perfect_links_;
 
     public:
-        explicit Manager(Logger& logger) noexcept : logger_(logger) {};
+        explicit Manager(Logger &logger) noexcept : logger_(logger){};
 
         virtual ~Manager() noexcept = default;
 
@@ -107,7 +120,7 @@ private:
     UDPServer &server_;
 
     Shared<std::unordered_set<Ack>> acks_to_send_;
-    Shared<std::set<Message>> messages_to_send_;
+    Shared<std::unordered_set<Message, Message::Hash>> messages_to_send_;
     Shared<std::unordered_map<Message::Id, time_t>> messages_delivered_;
 
     std::vector<Manager *> managers_;
@@ -129,7 +142,7 @@ public:
 protected:
     friend class PerfectLink::Manager;
 
-    void Subscribe(Manager* manager) noexcept;
+    void Subscribe(Manager *manager) noexcept;
 
 private:
     void SendAcks();

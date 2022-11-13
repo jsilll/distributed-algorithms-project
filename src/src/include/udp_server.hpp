@@ -17,6 +17,38 @@
 
 class UDPClient;
 
+struct Machine
+{
+    in_addr_t ip;
+    in_port_t port;
+
+    inline friend bool operator<(Machine m1, Machine m2) noexcept
+    {
+        if (m1.ip != m2.ip)
+        {
+            return m1.ip < m2.ip;
+        }
+
+        return m1.port < m2.port;
+    }
+
+    inline bool friend operator==(const Machine &m1, const Machine &m2)
+    {
+        return m1.ip == m2.ip && m1.port == m2.port;
+    }
+};
+
+template <>
+struct std::hash<Machine>
+{
+    inline std::size_t operator()(const Machine  &m) const noexcept
+    {
+        std::size_t h1 = std::hash<in_addr_t>{}(m.ip);
+        std::size_t h2 = std::hash<in_port_t>{}(m.port);
+        return h1 ^ (h2 < 1);
+    }
+};
+
 class UDPServer
 {
 public:
@@ -30,12 +62,6 @@ public:
         virtual void Notify(const std::string &msg) = 0;
     };
 
-    struct Machine
-    {
-        in_addr_t ip;
-        in_port_t port;
-    };
-
     static constexpr int kMaxMsgSize = 1024;
 
 private:
@@ -45,7 +71,7 @@ private:
 
     std::thread receive_thread_;
 
-    Shared<std::map<Machine, std::vector<Observer *>>> observers_;
+    Shared<std::unordered_map<Machine, std::vector<Observer *>>> observers_;
 
 public:
     UDPServer(in_addr_t ip, in_port_t port);
@@ -59,19 +85,9 @@ public:
     void Attach(Observer *obs, sockaddr_in addr) noexcept;
 
     [[nodiscard]] int sockfd() const noexcept;
-private:
 
+private:
     void Receive() noexcept;
 
     void NotifyAll(const std::string &msg, sockaddr_in addr);
 };
-
-inline bool operator<(UDPServer::Machine m1, UDPServer::Machine m2) noexcept
-{
-    if (m1.ip != m2.ip)
-    {
-        return m1.ip < m2.ip;
-    }
-
-    return m1.port < m2.port;
-}

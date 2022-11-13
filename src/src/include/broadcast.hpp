@@ -15,14 +15,19 @@ public:
             Seq seq;
             PerfectLink::Id author;
 
-            inline bool friend operator<(const Id &id1, const Id &id2) noexcept 
+            inline bool friend operator<(const Id &id1, const Id &id2) noexcept
             {
                 if (id1.seq != id2.seq)
                 {
                     return id1.seq < id2.seq;
                 }
-                
+
                 return id1.author < id2.author;
+            }
+
+            inline bool friend operator==(const Id &id1, const Id &id2)  noexcept
+            {
+                return id1.author == id2.author && id1.seq == id2.seq;
             }
         };
 
@@ -55,7 +60,7 @@ protected:
 
     virtual void NotifyInternal(const Broadcast::Message &msg) = 0;
 
-    virtual void DeliverInternal(const Broadcast::Message::Id &id, bool log) = 0; 
+    virtual void DeliverInternal(const Broadcast::Message::Id &id, bool log) = 0;
 
 private:
     void LogSend(const Broadcast::Message::Id::Seq seq) noexcept;
@@ -95,5 +100,17 @@ public:
         }
 
         return {};
+    }
+};
+
+// Injecting custom specialization of std::hash in namespace std
+template <>
+struct std::hash<Broadcast::Message::Id>
+{
+    inline std::size_t operator()(const Broadcast::Message::Id  &id) const noexcept
+    {
+        std::size_t h1 = std::hash<PerfectLink::Id>{}(id.author);
+        std::size_t h2 = std::hash<Broadcast::Message::Id::Seq>{}(id.seq);
+        return h1 ^ (h2 << 1);
     }
 };

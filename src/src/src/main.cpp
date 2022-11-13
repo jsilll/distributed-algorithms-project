@@ -1,18 +1,17 @@
+#include <thread>
+#include <vector>
 #include <csignal>
 #include <cstring>
 #include <iostream>
 #include <optional>
-#include <thread>
-#include <vector>
 
-#include "drivers.hpp"
-#include "perfect_link.hpp"
-#include "info_display.hpp"
 #include "logger.hpp"
 #include "parser.hpp"
+#include "drivers.hpp"
 #include "udp_client.hpp"
 #include "udp_server.hpp"
-
+#include "perfect_link.hpp"
+#include "info_display.hpp"
 
 /**
  * @brief Responsible for handling the

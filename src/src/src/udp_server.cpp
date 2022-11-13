@@ -1,10 +1,10 @@
 #include "udp_server.hpp"
 
+#include <string>
+#include <unistd.h>
 #include <iostream>
 #include <arpa/inet.h>
 #include <sys/socket.h>
-#include <string>
-#include <unistd.h>
 
 #include "udp_client.hpp"
 
@@ -65,11 +65,13 @@ void UDPServer::Attach(Observer *obs, sockaddr_in addr) noexcept
 void UDPServer::NotifyAll(const std::string &msg, sockaddr_in addr)
 {
     observers_.mutex.lock_shared();
-    for (auto const &obs : observers_.data[Machine{addr.sin_addr.s_addr, addr.sin_port}])
+    std::vector<Observer*> observers(observers_.data[Machine{addr.sin_addr.s_addr, addr.sin_port}]);
+    observers_.mutex.unlock_shared();
+
+    for (const auto &obs : observers)
     {
         obs->Notify(msg);
     }
-    observers_.mutex.unlock_shared();
 }
 
 int UDPServer::sockfd() const noexcept

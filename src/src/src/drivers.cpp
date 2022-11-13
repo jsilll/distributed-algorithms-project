@@ -153,7 +153,7 @@ void drivers::FIFOBroadcast(Parser &parser) noexcept
         logger.emplace(parser.output_path());
         server.emplace(local_host.ip, local_host.port);
         client.emplace(server.value().sockfd());
-        manager = std::make_unique<::UniformFIFOBroadcast>(logger.value(), id);
+        manager = std::make_unique<UniformFIFOBroadcast>(logger.value(), id);
     }
     catch (const std::exception &e)
     {
@@ -161,7 +161,7 @@ void drivers::FIFOBroadcast(Parser &parser) noexcept
         std::exit(EXIT_FAILURE);
     }
 
-    auto fifo = dynamic_cast<::UniformFIFOBroadcast*>(manager.get());
+    auto fifo = dynamic_cast<UniformFIFOBroadcast*>(manager.get());
 
     for (const auto &peer : hosts)
     {

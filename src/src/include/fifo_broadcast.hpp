@@ -10,7 +10,7 @@ private:
     struct PeerState
     {
         Broadcast::Message::Id::Seq next{1};
-        std::set<Broadcast::Message::Id::Seq> pending;
+        std::set<Broadcast::Message::Id::Seq> pending; // std::set for in order iteration
     };
 
 private:
@@ -84,7 +84,7 @@ private:
     struct PeerState
     {
         Broadcast::Message::Id::Seq next{1};
-        std::set<Broadcast::Message::Id::Seq> pending;
+        std::set<Broadcast::Message::Id::Seq> pending; // std::set for inorder iteration
     };
 
 private:

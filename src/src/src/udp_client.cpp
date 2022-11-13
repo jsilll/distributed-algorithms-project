@@ -1,12 +1,12 @@
 #include "udp_client.hpp"
 
-#include <arpa/inet.h>
-#include <cstring>
-#include <stdexcept>
 #include <string>
-#include <sys/socket.h>
-#include <sys/types.h>
+#include <cstring>
 #include <unistd.h>
+#include <stdexcept>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 
 UDPClient::UDPClient()
     : sockfd_(socket(AF_INET, SOCK_DGRAM, 0)), sock_owner_(true)
@@ -49,9 +49,9 @@ ssize_t UDPClient::Send(const std::string &msg, sockaddr_in to_addr) const
 sockaddr_in UDPClient::Address(in_addr_t ip, in_port_t port) noexcept
 {
     sockaddr_in address{};
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = ip;
     address.sin_port = port;
+    address.sin_addr.s_addr = ip;
+    address.sin_family = AF_INET;
     bzero(address.sin_zero, sizeof(address.sin_zero));
     return address;
 }
