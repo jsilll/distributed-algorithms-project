@@ -17,7 +17,7 @@ private:
     std::unordered_map<PerfectLink::Id, PeerState> peer_state_;
 
 public:
-    explicit ReliableFIFOBroadcast(Logger &logger, unsigned long long id) noexcept
+    explicit ReliableFIFOBroadcast(Logger &logger, PerfectLink::Id id) noexcept
         : BestEffortBroadcast(logger, id, true) {}
 
     ~ReliableFIFOBroadcast() noexcept override = default;
@@ -91,7 +91,7 @@ private:
     std::unordered_map<PerfectLink::Id, PeerState> peer_state_;
 
 public:
-    explicit UniformFIFOBroadcast(Logger &logger, unsigned long long id) noexcept
+    explicit UniformFIFOBroadcast(Logger &logger, PerfectLink::Id id) noexcept
         : UniformReliableBroadcast(logger, id) {}
 
     ~UniformFIFOBroadcast() noexcept override = default;

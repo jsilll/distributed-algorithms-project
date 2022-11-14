@@ -30,7 +30,7 @@ void PerfectLink::Manager::Stop() noexcept
 
 void PerfectLink::Manager::Add(std::unique_ptr<PerfectLink> pl) noexcept
 {
-    const unsigned long long id = pl->target_id_;
+    const PerfectLink::Id id = pl->target_id_;
 
     perfect_links_.mutex.lock();
     perfect_links_.data[id] = std::move(pl);
@@ -84,7 +84,7 @@ void PerfectLink::Manager::SendMessages()
     }
 }
 
-void PerfectLink::BasicManager::Send(unsigned long long int receiver_id, const std::string &msg) noexcept
+void PerfectLink::BasicManager::Send(Id receiver_id, const std::string &msg) noexcept
 {
     perfect_links_.mutex.lock_shared();
     if (perfect_links_.data.count(receiver_id))
@@ -97,17 +97,17 @@ void PerfectLink::BasicManager::Send(unsigned long long int receiver_id, const s
     perfect_links_.mutex.unlock_shared();
 }
 
-void PerfectLink::BasicManager::Notify(unsigned long long int sender_id, const Message &msg) noexcept
+void PerfectLink::BasicManager::Notify(Id sender_id, const Message &msg) noexcept
 {
     std::stringstream ss;
     ss << "d " << sender_id << " " << msg.id;
     logger_ << ss.str();
 }
 
-PerfectLink::PerfectLink(unsigned long int id,
-                         const unsigned long int target_id,
+PerfectLink::PerfectLink(Id id,
+                         Id target_id,
                          in_addr_t target_ip,
-                         unsigned short target_pot,
+                         in_port_t target_pot,
                          UDPServer &server,
                          UDPClient &client)
     : id_(id), target_id_(target_id), target_addr_(UDPClient::Address(target_ip, target_pot)),
@@ -121,7 +121,18 @@ PerfectLink::Message::Id PerfectLink::Send(const std::string &msg) noexcept
     Message::Id id = n_messages_sent_.fetch_add(1);
 
     messages_to_send_.mutex.lock();
-    messages_to_send_.data.insert({id, msg});
+    messages_to_send_.data.insert({id, std::move(std::vector<char>(msg.begin(), msg.end()))});
+    messages_to_send_.mutex.unlock();
+
+    return id;
+}
+
+PerfectLink::Message::Id PerfectLink::Send(const std::vector<char> payload) noexcept
+{
+    Message::Id id = n_messages_sent_.fetch_add(1);
+
+    messages_to_send_.mutex.lock();
+    messages_to_send_.data.insert({id, std::move(payload)});
     messages_to_send_.mutex.unlock();
 
     return id;
@@ -145,7 +156,7 @@ void PerfectLink::SendAcks()
     {
         char buffer[kPacketPrefixSize];
 
-        EncodeMetadata(ACK, ack_id, buffer);
+        EncodeMetadata(kACK, ack_id, buffer);
 
         try
         {
@@ -201,21 +212,16 @@ void PerfectLink::SendMessages()
 
     for (auto &msg : messages_to_send_.data)
     {
-        char buffer[kPacketPrefixSize + UDPServer::kMaxMsgSize];
+        char buffer[UDPServer::kMaxSendSize];
 
-        EncodeMetadata(MSG, msg.id, buffer);
-
-        if (std::snprintf(buffer + kPacketPrefixSize, sizeof(buffer) - kPacketPrefixSize, "%s", msg.payload.c_str()) <= 0)
-        {
-            messages_to_send_.mutex.unlock_shared();
-            throw std::runtime_error("Error during formatting.");
-        }
+        EncodeMetadata(kMSG, msg.id, buffer);
+        std::copy(msg.payload.begin(), msg.payload.end(), buffer + kPacketPrefixSize);
 
         try
         {
             [[maybe_unused]] ssize_t bytes = client_.Send(buffer, kPacketPrefixSize + msg.payload.size(), target_addr_);
 #ifdef DEBUG
-            std::cout << "[DBUG] Sending Message " << msg.id << " To Process " << target_id_ << ": '" << msg.payload << "'\n";
+            std::cout << "[DBUG] Sending Message " << msg.id << " To Process " << target_id_ << "\n";
 #endif
         }
         catch (const std::exception &e)
@@ -227,14 +233,14 @@ void PerfectLink::SendMessages()
     messages_to_send_.mutex.unlock_shared();
 }
 
-void PerfectLink::Notify(const char *bytes) noexcept
+void PerfectLink::Notify(const std::vector<char> &bytes) noexcept
 {
     auto parsed_packet = Parse(bytes);
 
     if (!parsed_packet.has_value())
     {
 #ifdef DEBUG
-        std::cerr << "[DBUG] Ignoring Invalid Message: '" << bytes << "'\n";
+        std::cerr << "[DBUG] Invalid Perfect Links Message received.\n";
 #endif
         return;
     }
@@ -279,7 +285,7 @@ void PerfectLink::Notify(const char *bytes) noexcept
         if (message != messages_to_send_.data.end())
         {
 #ifdef DEBUG
-            std::cout << "[DBUG] Successfully Sent Message " << ack_id << " To Process " << target_id_ << ": '" << (*message).payload << "'" << std::endl;
+            std::cout << "[DBUG] Successfully Sent Message " << ack_id << " To Process " << target_id_ << "\n";
 #endif
             // If we were sending this message,
             // then stop sending it peer has received
@@ -292,45 +298,39 @@ void PerfectLink::Notify(const char *bytes) noexcept
 
 void PerfectLink::EncodeMetadata(PacketType type, Message::Id id, char *buffer) noexcept
 {
-    auto id_ptr = static_cast<const char *>(static_cast<const void *>(&id));
     buffer[0] = type;
+    auto id_ptr = static_cast<const char *>(static_cast<const void *>(&id));
     std::copy(id_ptr, id_ptr + sizeof(Message::Id), buffer + sizeof(PacketType));
 }
 
-std::optional<std::variant<PerfectLink::Message, PerfectLink::Ack>> PerfectLink::Parse(const char *bytes) noexcept
+std::optional<std::variant<PerfectLink::Message, PerfectLink::Ack>> PerfectLink::Parse(const std::vector<char> &bytes) noexcept
 {
-    if (bytes[0] == MSG)
-    {
-        // Format: MSG <id> PAYLOAD <payload>
-        try
-        {
-            Message::Id id;
-            auto id_ptr = static_cast<char *>(static_cast<void *>(&id));
-            std::copy(bytes + sizeof(PacketType), bytes + sizeof(PacketType) + sizeof(Message::Id), id_ptr);
-            return Message{id, std::string(bytes + kPacketPrefixSize)};
-        }
-        catch (const std::exception &e)
-        {
-            return {};
-        }
-    }
-    else if (bytes[0] == ACK)
-    {
-        // Format: ACK <id>
-        try
-        {
-            Message::Id id;
-            auto id_ptr = static_cast<char *>(static_cast<void *>(&id));
-            std::copy(bytes + sizeof(PacketType), bytes + sizeof(PacketType) + sizeof(Message::Id), id_ptr);
-            return Ack{id};
-        }
-        catch (const std::exception &e)
-        {
-            return {};
-        }
-    }
-    else
+    if (bytes.size() < kPacketPrefixSize)
     {
         return {};
     }
+
+    if (bytes[0] == kMSG)
+    {
+        Message::Id id;
+        std::vector<char> payload;
+        payload.reserve(bytes.size());
+
+        auto id_ptr = static_cast<char *>(static_cast<void *>(&id));
+        std::copy(bytes.begin() + sizeof(PacketType), bytes.begin() + sizeof(PacketType) + sizeof(Message::Id), id_ptr);
+        std::copy(bytes.begin() + kPacketPrefixSize, bytes.end(), std::back_inserter(payload));
+
+        return Message{id, std::move(payload)};
+    }
+    else if (bytes[0] == kACK)
+    {
+        Message::Id id;
+
+        auto id_ptr = static_cast<char *>(static_cast<void *>(&id));
+        std::copy(bytes.begin() + sizeof(PacketType), bytes.begin() + sizeof(PacketType) + sizeof(Message::Id), id_ptr);
+
+        return Ack{id};
+    }
+
+    return {};
 }

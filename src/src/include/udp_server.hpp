@@ -59,10 +59,10 @@ public:
     protected:
         virtual ~Observer() = default;
 
-        virtual void Notify(const char *bytes) = 0;
+        virtual void Notify(const std::vector<char> &bytes) = 0;
     };
 
-    static constexpr int kMaxMsgSize = 1024;
+    static constexpr size_t kMaxSendSize = 1024;
 
 private:
     int sockfd_;
@@ -89,5 +89,5 @@ public:
 private:
     void Receive() noexcept;
 
-    void NotifyAll(const char *bytes, sockaddr_in addr);
+    void NotifyAll(const std::vector<char> &bytes, sockaddr_in addr);
 };

@@ -43,14 +43,16 @@ void UDPServer::Receive() noexcept
 {
     while (on_.load())
     {
-        char buffer[kMaxMsgSize];
+        char buffer[kMaxSendSize];
         sockaddr_in addr{};
-        socklen_t len = sizeof(addr);
-        ssize_t bytes = recvfrom(sockfd_, buffer, sizeof(buffer), 0, reinterpret_cast<sockaddr *>(&addr), &len);
-        buffer[bytes] = '\0';
-        if (bytes > 0)
+        socklen_t addr_len = sizeof(addr);
+        ssize_t len = recvfrom(sockfd_, buffer, sizeof(buffer), 0, reinterpret_cast<sockaddr *>(&addr), &addr_len);
+        if (len > 0)
         {
-            NotifyAll(buffer, addr);
+            std::vector<char> payload;
+            payload.reserve(addr_len);
+            std::copy(buffer, buffer + len, std::back_inserter(payload));
+            NotifyAll(payload, addr);
         }
     }
 }
@@ -62,7 +64,7 @@ void UDPServer::Attach(Observer *obs, sockaddr_in addr) noexcept
     observers_.mutex.unlock();
 }
 
-void UDPServer::NotifyAll(const char *bytes, sockaddr_in addr)
+void UDPServer::NotifyAll(const std::vector<char> &bytes, sockaddr_in addr)
 {
     observers_.mutex.lock_shared();
     std::vector<Observer*> observers(observers_.data[Machine{addr.sin_addr.s_addr, addr.sin_port}]);

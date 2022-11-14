@@ -20,7 +20,7 @@ private:
     bool deliver_to_upper_layer_;
 
 public:
-    explicit BestEffortBroadcast(Logger &logger, unsigned long long id, bool deliver_to_upper_layer = false) noexcept
+    explicit BestEffortBroadcast(Logger &logger, PerfectLink::Id id, bool deliver_to_upper_layer = false) noexcept
         : Broadcast(logger, id), deliver_to_upper_layer_(deliver_to_upper_layer) {}
 
     ~BestEffortBroadcast() noexcept override = default;
@@ -35,9 +35,17 @@ protected:
             pls.emplace_back(pl.get());
         perfect_links_.mutex.unlock_shared();
 
+        char buffer[UDPServer::kMaxSendSize];
+        EncodeMetadata(msg.id.author, msg.id.seq, buffer);
+        std::copy(msg.payload.begin(), msg.payload.end(), buffer + kPacketPrefixSize);
+        
+        std::vector<char> payload;
+        payload.reserve(kPacketPrefixSize + msg.payload.size());
+        std::copy(buffer, buffer + kPacketPrefixSize + msg.payload.size(), std::back_inserter(payload));
+         
         for (const auto pl : pls)
         {
-            pl->Send(Format(msg));
+            pl->Send(std::move(payload));
         }
     }
 

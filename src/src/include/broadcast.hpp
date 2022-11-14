@@ -25,7 +25,7 @@ public:
                 return id1.author < id2.author;
             }
 
-            inline bool friend operator==(const Id &id1, const Id &id2)  noexcept
+            inline bool friend operator==(const Id &id1, const Id &id2) noexcept
             {
                 return id1.author == id2.author && id1.seq == id2.seq;
             }
@@ -33,19 +33,18 @@ public:
 
         Id id;
         PerfectLink::Id sender;
-
-        std::string payload;
+        std::vector<char> payload;
     };
 
-private:
-    static constexpr int kMsgPrefixSize = 42;
+protected:
+    static constexpr size_t kPacketPrefixSize = sizeof(PerfectLink::Id) + sizeof(Message::Id::Seq);
 
 protected:
     PerfectLink::Id id_;
     std::atomic<Message::Id::Seq> n_messages_sent_{1};
 
 public:
-    explicit Broadcast(Logger &logger, unsigned long long id) noexcept
+    explicit Broadcast(Logger &logger, PerfectLink::Id id) noexcept
         : PerfectLink::Manager::Manager(logger), id_(id) {}
 
     ~Broadcast() noexcept override = default;
@@ -53,7 +52,7 @@ public:
     void Send(const std::string &msg) noexcept;
 
 protected:
-    void Notify(unsigned long long int sender_id, const PerfectLink::Message &msg) noexcept final;
+    void Notify(PerfectLink::Id sender_id, const PerfectLink::Message &msg) noexcept final;
 
 protected:
     virtual void SendInternal(const Broadcast::Message &msg) = 0;
@@ -69,45 +68,41 @@ protected:
     void LogDeliver(const Broadcast::Message::Id &id) noexcept;
 
 public:
-    static std::string Format(const Message &msg)
+    void EncodeMetadata(PerfectLink::Id aid, Broadcast::Message::Id::Seq seq, char *buffer)
     {
-        char buffer[UDPServer::kMaxMsgSize];
-
-        if (std::snprintf(buffer, sizeof(buffer), "BRO AID %010lu SEQ %010lu PAYLOAD %s", msg.id.author, msg.id.seq, msg.payload.c_str()) <= 0)
-        {
-            throw std::runtime_error("Error during formatting.");
-        }
-
-        return std::string(buffer);
+        auto aid_ptr = static_cast<char *>(static_cast<void *>(&aid));
+        auto seq_ptr = static_cast<char *>(static_cast<void *>(&seq));
+        std::copy(aid_ptr, aid_ptr + sizeof(PerfectLink::Id), buffer);
+        std::copy(seq_ptr, seq_ptr + sizeof(Broadcast::Message::Id::Seq), buffer + sizeof(PerfectLink::Id));
     }
 
-    static std::optional<Message> Parse(unsigned long long sender_id, const std::string &msg) noexcept
+    static std::optional<Message> Parse(PerfectLink::Id sender_id, const std::vector<char> &bytes) noexcept
     {
-        // BRO AID 0000000000 ID 0000000000 PAYLOAD
-        if (msg.size() > kMsgPrefixSize && msg.substr(0, 3) == "BRO" && msg.substr(4, 3) == "AID" &&
-            msg.substr(19, 3) == "SEQ" && msg.substr(34, 7) == "PAYLOAD")
+        if (bytes.size() <= kPacketPrefixSize)
         {
-            try
-            {
-                unsigned long aid = std::stoul(msg.substr(8, 10));
-                unsigned long seq = std::stoul(msg.substr(23, 10));
-                return {{{seq, aid}, sender_id, msg.substr(kMsgPrefixSize)}};
-            }
-            catch (const std::exception &e)
-            {
-                return {};
-            }
+            std::cout << bytes.size() << " " << kPacketPrefixSize << std::endl;
+            return {};
         }
 
-        return {};
+        PerfectLink::Id aid;
+        Message::Id::Seq seq;
+        std::vector<char> payload;
+        payload.reserve(bytes.size());
+
+        auto aid_ptr = static_cast<char *>(static_cast<void *>(&aid));
+        auto seq_ptr = static_cast<char *>(static_cast<void *>(&seq));
+        std::copy(bytes.begin(), bytes.begin() + sizeof(PerfectLink::Id), aid_ptr);
+        std::copy(bytes.begin() + sizeof(PerfectLink::Id), bytes.begin() + kPacketPrefixSize, seq_ptr);
+        std::copy(bytes.begin() + kPacketPrefixSize, bytes.end(), std::back_inserter(payload));
+
+        return {{{seq, aid}, sender_id, std::move(payload)}};
     }
 };
 
-// Injecting custom specialization of std::hash in namespace std
 template <>
 struct std::hash<Broadcast::Message::Id>
 {
-    inline std::size_t operator()(const Broadcast::Message::Id  &id) const noexcept
+    inline std::size_t operator()(const Broadcast::Message::Id &id) const noexcept
     {
         std::size_t h1 = std::hash<PerfectLink::Id>{}(id.author);
         std::size_t h2 = std::hash<Broadcast::Message::Id::Seq>{}(id.seq);

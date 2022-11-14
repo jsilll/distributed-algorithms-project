@@ -190,7 +190,7 @@ void drivers::FIFOBroadcast(Parser &parser) noexcept
 
     for (unsigned long i = 0; i < n_messages; ++i)
     {
-        fifo->Send(std::to_string(i));
+        fifo->Send("m");
     }
 
     WaitForever();

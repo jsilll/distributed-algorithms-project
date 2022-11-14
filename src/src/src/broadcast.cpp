@@ -4,12 +4,12 @@
 
 void Broadcast::Send(const std::string &msg) noexcept
 {
-    Message message = {{n_messages_sent_.fetch_add(1), id_}, id_, msg};
+    Message message = {{n_messages_sent_.fetch_add(1), id_}, id_,  std::move(std::vector<char>(msg.begin(), msg.end()))};
     SendInternal(message); // Virtual Call
     LogSend(message.id.seq);
 }
 
-void Broadcast::Notify(unsigned long long int sender_id, const PerfectLink::Message &msg) noexcept
+void Broadcast::Notify(PerfectLink::Id sender_id, const PerfectLink::Message &msg) noexcept
 {
     auto message = Parse(sender_id, msg.payload);
 
@@ -20,7 +20,7 @@ void Broadcast::Notify(unsigned long long int sender_id, const PerfectLink::Mess
     else
     {
 #ifdef DEBUG
-        std::cout << "Invalid broadcast message received." << std::endl;
+        std::cout << "Invalid Broadcast Message received." << std::endl;
 #endif
     }
 }

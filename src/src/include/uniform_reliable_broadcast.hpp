@@ -29,7 +29,7 @@ protected:
     std::thread deliver_thread_;
 
 public:
-    explicit UniformReliableBroadcast(Logger &logger, unsigned long long id) noexcept
+    explicit UniformReliableBroadcast(Logger &logger, PerfectLink::Id id) noexcept
         : BestEffortBroadcast(logger, id) {}
 
     ~UniformReliableBroadcast() noexcept override = default;

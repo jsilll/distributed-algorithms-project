@@ -25,8 +25,8 @@ public:
 
     enum PacketType : bool
     {
-        ACK,
-        MSG,
+        kACK,
+        kMSG,
     };
 
     struct Message
@@ -34,7 +34,7 @@ public:
         typedef unsigned long int Id;
 
         Id id;
-        std::string payload;
+        std::vector<char> payload;
 
         inline friend bool operator<(const Message &m1, const Message &m2) noexcept
         {
@@ -89,7 +89,7 @@ public:
         void SendAcks();
         void SendMessages();
 
-        virtual void Notify(unsigned long long int sender_id, const Message &msg) = 0;
+        virtual void Notify(Id sender_id, const Message &msg) = 0;
     };
 
     class BasicManager final : public Manager
@@ -97,14 +97,14 @@ public:
     public:
         explicit BasicManager(Logger &logger) : Manager::Manager(logger) {}
 
-        void Send(unsigned long long int receiver_id, const std::string &msg) noexcept;
+        void Send(PerfectLink::Id receiver_id, const std::string &msg) noexcept;
 
     protected:
-        void Notify(unsigned long long int sender_id, const Message &msg) noexcept override;
+        void Notify(Id sender_id, const Message &msg) noexcept override;
     };
 
 private:
-    static constexpr int kPacketPrefixSize = sizeof(PacketType) + sizeof(Message::Id);
+    static constexpr size_t kPacketPrefixSize = sizeof(PacketType) + sizeof(Message::Id);
 
     /**
      * @brief This value should be the result of:
@@ -135,14 +135,15 @@ public:
     PerfectLink(const PerfectLink &) = delete;
     PerfectLink(PerfectLink &&) = delete;
 
-    PerfectLink(unsigned long int id_,
-                unsigned long int target_id_,
+    PerfectLink(Id id_,
+                Id target_id_,
                 in_addr_t receiver_ip,
-                unsigned short receiver_port,
+                in_port_t receiver_port,
                 UDPServer &server,
                 UDPClient &client);
 
     Message::Id Send(const std::string &msg) noexcept;
+    Message::Id Send(const std::vector<char> payload) noexcept;
 
 protected:
     friend class PerfectLink::Manager;
@@ -154,8 +155,8 @@ private:
     void CleanAcks() noexcept;
     void SendMessages();
 
-    void Notify(const char *bytes) noexcept override;
+    void Notify(const std::vector<char> &bytes) noexcept final;
 
-    static void EncodeMetadata(PacketType type, Message::Id id, char *buffer) noexcept; 
-    static std::optional<std::variant<Message, Ack>> Parse(const char *bytes) noexcept;
+    static void EncodeMetadata(PacketType type, Message::Id id, char *buffer) noexcept;
+    static std::optional<std::variant<Message, Ack>> Parse(const std::vector<char> &bytes) noexcept;
 };
