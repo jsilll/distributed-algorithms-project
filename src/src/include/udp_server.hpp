@@ -15,6 +15,8 @@
 
 #include "shared.hpp"
 
+#define UDP_SERVER_MAX_MSG_SIZE 32
+
 class UDPClient;
 
 struct Machine
@@ -62,7 +64,7 @@ public:
         virtual void Notify(const std::vector<char> &bytes) = 0;
     };
 
-    static constexpr size_t kMaxSendSize = 1024;
+    static constexpr size_t kMaxSendSize = UDP_SERVER_MAX_MSG_SIZE;
 
 private:
     int sockfd_;

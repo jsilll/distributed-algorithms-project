@@ -78,14 +78,14 @@ public:
 
     static std::optional<Message> Parse(PerfectLink::Id sender_id, const std::vector<char> &bytes) noexcept
     {
-        if (bytes.size() <= kPacketPrefixSize)
+        if (bytes.size() < kPacketPrefixSize)
         {
-            std::cout << bytes.size() << " " << kPacketPrefixSize << std::endl;
             return {};
         }
 
         PerfectLink::Id aid;
         Message::Id::Seq seq;
+        
         std::vector<char> payload;
         payload.reserve(bytes.size());
 
@@ -95,7 +95,7 @@ public:
         std::copy(bytes.begin() + sizeof(PerfectLink::Id), bytes.begin() + kPacketPrefixSize, seq_ptr);
         std::copy(bytes.begin() + kPacketPrefixSize, bytes.end(), std::back_inserter(payload));
 
-        return {{{seq, aid}, sender_id, std::move(payload)}};
+        return {{{seq, aid}, sender_id, payload}};
     }
 };
 

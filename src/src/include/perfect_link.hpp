@@ -25,8 +25,8 @@ public:
 
     enum PacketType : bool
     {
-        kACK,
-        kMSG,
+        kACK = false,
+        kMSG = true,
     };
 
     struct Message
@@ -56,6 +56,8 @@ public:
     };
 
     typedef Message::Id Ack;
+
+    static constexpr size_t kPacketPrefixSize = sizeof(PacketType) + sizeof(Message::Id);
 
 public:
     class Manager
@@ -104,7 +106,6 @@ public:
     };
 
 private:
-    static constexpr size_t kPacketPrefixSize = sizeof(PacketType) + sizeof(Message::Id);
 
     /**
      * @brief This value should be the result of:
@@ -115,7 +116,6 @@ private:
 
 private:
     const Id id_;
-
     const Id target_id_;
     const sockaddr_in target_addr_;
 
@@ -143,7 +143,7 @@ public:
                 UDPClient &client);
 
     Message::Id Send(const std::string &msg) noexcept;
-    Message::Id Send(const std::vector<char> payload) noexcept;
+    Message::Id Send(const std::vector<char> &payload) noexcept;
 
 protected:
     friend class PerfectLink::Manager;

@@ -44,8 +44,9 @@ void PerfectLink::Manager::SendAcks()
 {
     while (on_.load())
     {
-        perfect_links_.mutex.lock_shared();
         std::vector<PerfectLink *> pls;
+
+        perfect_links_.mutex.lock_shared();
         pls.reserve(perfect_links_.data.size());
         for (const auto &[_, pl] : perfect_links_.data)
         {
@@ -66,8 +67,9 @@ void PerfectLink::Manager::SendMessages()
 {
     while (on_.load())
     {
-        perfect_links_.mutex.lock_shared();
         std::vector<PerfectLink *> pls;
+
+        perfect_links_.mutex.lock_shared();
         pls.reserve(perfect_links_.data.size());
         for (const auto &[_, pl] : perfect_links_.data)
         {
@@ -121,19 +123,23 @@ PerfectLink::Message::Id PerfectLink::Send(const std::string &msg) noexcept
     Message::Id id = n_messages_sent_.fetch_add(1);
 
     messages_to_send_.mutex.lock();
-    messages_to_send_.data.insert({id, std::move(std::vector<char>(msg.begin(), msg.end()))});
+    messages_to_send_.data.insert({id, std::vector<char>(msg.begin(), msg.end())});
     messages_to_send_.mutex.unlock();
 
     return id;
 }
 
-PerfectLink::Message::Id PerfectLink::Send(const std::vector<char> payload) noexcept
+PerfectLink::Message::Id PerfectLink::Send(const std::vector<char> &payload) noexcept
 {
     Message::Id id = n_messages_sent_.fetch_add(1);
 
     messages_to_send_.mutex.lock();
-    messages_to_send_.data.insert({id, std::move(payload)});
+    messages_to_send_.data.insert({id, payload});
     messages_to_send_.mutex.unlock();
+
+#ifdef DEBUG
+    std::cout << "[DBUG] PerfectLink sending Raw Message of size (no metadata): " << payload.size() << "\n";
+#endif
 
     return id;
 }
@@ -154,6 +160,7 @@ void PerfectLink::SendAcks()
 
     for (auto &ack_id : acks_to_send_.data)
     {
+        static_assert(kPacketPrefixSize <= UDPServer::kMaxSendSize);
         char buffer[kPacketPrefixSize];
 
         EncodeMetadata(kACK, ack_id, buffer);
@@ -320,7 +327,11 @@ std::optional<std::variant<PerfectLink::Message, PerfectLink::Ack>> PerfectLink:
         std::copy(bytes.begin() + sizeof(PacketType), bytes.begin() + sizeof(PacketType) + sizeof(Message::Id), id_ptr);
         std::copy(bytes.begin() + kPacketPrefixSize, bytes.end(), std::back_inserter(payload));
 
-        return Message{id, std::move(payload)};
+#ifdef DEBUG
+        std::cout << "[DBUG] PerfectLink received a message with id " << id << " and payload size: " << payload.size() << "\n";
+#endif
+
+        return Message{id, payload};
     }
     else if (bytes[0] == kACK)
     {

@@ -1,8 +1,11 @@
 #pragma once
 
 #include <cmath>
+#include <queue>
 
 #include "best_effort_broadcast.hpp"
+
+#define URB_MAX_MSGS_IN_NETWORK (1 << 14)
 
 /**
  * @brief
@@ -22,8 +25,9 @@ protected:
     static constexpr int kFinishDeliveringAllMs = 250;
 
 protected:
-    Shared<std::unordered_set<Broadcast::Message::Id>> pending_;
+    Shared<std::queue<Broadcast::Message>> pending_for_broadcast_;
     Shared<std::unordered_set<Broadcast::Message::Id>> delivered_;
+    Shared<std::unordered_set<Broadcast::Message::Id>> pending_for_delivery_;
     Shared<std::unordered_map<Message::Id, std::unordered_set<PerfectLink::Id>>> ack_;
 
     std::thread deliver_thread_;
@@ -52,9 +56,22 @@ public:
 protected:
     void SendInternal(const Broadcast::Message &msg) noexcept override
     {
-        pending_.mutex.lock();
-        pending_.data.insert(msg.id);
-        pending_.mutex.unlock();
+        pending_for_delivery_.mutex.lock_shared();
+        std::size_t n_pending_for_delivery = pending_for_delivery_.data.size();
+        pending_for_delivery_.mutex.unlock_shared();
+
+        std::size_t n_ideal_pending_for_delivery = std::max(1, static_cast<int>(URB_MAX_MSGS_IN_NETWORK / std::pow(n_processes_.load(), 2)));
+        if (n_pending_for_delivery > n_ideal_pending_for_delivery)
+        {
+            pending_for_broadcast_.mutex.lock_shared();
+            pending_for_broadcast_.data.push(msg);
+            pending_for_broadcast_.mutex.unlock_shared();
+            return;
+        }
+
+        pending_for_delivery_.mutex.lock();
+        pending_for_delivery_.data.insert(msg.id);
+        pending_for_delivery_.mutex.unlock();
 
         BestEffortBroadcast::SendInternal(msg);
     }
@@ -67,9 +84,9 @@ protected:
         ack_.data[msg.id].insert(msg.sender);
         ack_.mutex.unlock();
 
-        pending_.mutex.lock_shared();
-        bool not_pending = pending_.data.count(msg.id) == 0;
-        pending_.mutex.unlock_shared();
+        pending_for_delivery_.mutex.lock_shared();
+        bool not_pending = pending_for_delivery_.data.count(msg.id) == 0;
+        pending_for_delivery_.mutex.unlock_shared();
 
         delivered_.mutex.lock_shared();
         bool not_delivered = delivered_.data.count(msg.id) == 0;
@@ -77,9 +94,9 @@ protected:
 
         if (not_pending && not_delivered)
         {
-            pending_.mutex.lock();
-            pending_.data.insert(msg.id);
-            pending_.mutex.unlock();
+            pending_for_delivery_.mutex.lock();
+            pending_for_delivery_.data.insert(msg.id);
+            pending_for_delivery_.mutex.unlock();
 #ifdef DEBUG
             std::cout << "[DBUG] URB Relaying: " << msg.id.author << " " << msg.id.seq << "\n";
 #endif
@@ -100,12 +117,12 @@ private:
     {
         while (on_.load())
         {
-            pending_.mutex.lock();
-            auto pending_messages = std::vector<Broadcast::Message::Id>(pending_.data.begin(), pending_.data.end());
+            pending_for_delivery_.mutex.lock();
+            auto pending_messages = std::vector<Broadcast::Message::Id>(pending_for_delivery_.data.begin(), pending_for_delivery_.data.end());
 #ifdef DEBUG
-            std::cout << "[DBUG] URB Pending: " << pending_.data.size() << "\n";
+            std::cout << "[DBUG] URB Pending: " << pending_for_delivery_.data.size() << "\n";
 #endif
-            pending_.mutex.unlock();
+            pending_for_delivery_.mutex.unlock();
 
             for (const auto id : pending_messages)
             {
@@ -119,13 +136,36 @@ private:
 
                 if (majority_seen && not_delivered)
                 {
-                    pending_.mutex.lock();
-                    pending_.data.erase(id);
-                    pending_.mutex.unlock();
+                    pending_for_broadcast_.mutex.lock_shared();
+                    auto &msg = pending_for_broadcast_.data.front();
+                    pending_for_broadcast_.mutex.unlock_shared();
+
+                    pending_for_delivery_.mutex.lock();
+                    pending_for_delivery_.data.erase(id);
+                    std::size_t n_pending_for_delivery = pending_for_delivery_.data.size();
+                    pending_for_delivery_.mutex.unlock();
+
+                    std::size_t n_ideal_pending_for_delivery = std::max(1, static_cast<int>(URB_MAX_MSGS_IN_NETWORK / std::pow(n_processes_.load(), 2)));
+                    if (n_pending_for_delivery < n_ideal_pending_for_delivery)
+                    {
+                        pending_for_delivery_.mutex.lock();
+                        pending_for_delivery_.data.insert(msg.id);
+                        pending_for_delivery_.mutex.unlock();
+
+                        pending_for_broadcast_.mutex.lock();
+                        pending_for_broadcast_.data.pop();
+                        pending_for_broadcast_.mutex.unlock();
+
+                        BestEffortBroadcast::SendInternal(msg);
+                    }
 
                     delivered_.mutex.lock();
                     delivered_.data.insert(id);
                     delivered_.mutex.unlock();
+
+                    ack_.mutex.lock();
+                    ack_.data.erase(id);
+                    ack_.mutex.unlock();
 #ifdef DEBUG
                     std::cout << "[DBUG] URB Delivering: " << id.author << " " << id.seq << "\n";
 #endif

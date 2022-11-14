@@ -28,24 +28,32 @@ public:
 protected:
     void SendInternal(const Broadcast::Message &msg) noexcept override
     {
-        perfect_links_.mutex.lock_shared();
         std::vector<PerfectLink *> pls;
+        
+        perfect_links_.mutex.lock_shared();
         pls.reserve(perfect_links_.data.size());
         for (const auto &[_, pl] : perfect_links_.data)
+        {
             pls.emplace_back(pl.get());
+        }
         perfect_links_.mutex.unlock_shared();
 
-        char buffer[UDPServer::kMaxSendSize];
+        static_assert(UDPServer::kMaxSendSize > PerfectLink::kPacketPrefixSize);
+        char buffer[UDPServer::kMaxSendSize - PerfectLink::kPacketPrefixSize];
         EncodeMetadata(msg.id.author, msg.id.seq, buffer);
         std::copy(msg.payload.begin(), msg.payload.end(), buffer + kPacketPrefixSize);
-        
+
         std::vector<char> payload;
         payload.reserve(kPacketPrefixSize + msg.payload.size());
         std::copy(buffer, buffer + kPacketPrefixSize + msg.payload.size(), std::back_inserter(payload));
-         
+
+#ifdef DEBUG
+        std::cout << "[DBUG] Best Effort Broadcast sending message of size: " << payload.size() << "\n";
+#endif
+
         for (const auto pl : pls)
         {
-            pl->Send(std::move(payload));
+            pl->Send(payload);
         }
     }
 

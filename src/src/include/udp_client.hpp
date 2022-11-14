@@ -1,10 +1,10 @@
 #pragma once
 
-#include <arpa/inet.h>
-#include <netdb.h>
 #include <string>
-#include <sys/socket.h>
+#include <netdb.h>
 #include <sys/types.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 
 class UDPServer;
 

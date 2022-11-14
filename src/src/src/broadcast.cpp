@@ -4,7 +4,7 @@
 
 void Broadcast::Send(const std::string &msg) noexcept
 {
-    Message message = {{n_messages_sent_.fetch_add(1), id_}, id_,  std::move(std::vector<char>(msg.begin(), msg.end()))};
+    Message message = {{n_messages_sent_.fetch_add(1), id_}, id_,  std::vector<char>(msg.begin(), msg.end())};
     SendInternal(message); // Virtual Call
     LogSend(message.id.seq);
 }

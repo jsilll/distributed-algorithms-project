@@ -96,7 +96,7 @@ void drivers::PerfectLinks(Parser &parser) noexcept
         auto basic_manager = dynamic_cast<PerfectLink::BasicManager *>(manager.get());
         for (unsigned long i = 0; i < n_messages; ++i)
         {
-            basic_manager->Send(target_host.id, "m");
+            basic_manager->Send(target_host.id, "");
         }
     }
     else
@@ -190,7 +190,7 @@ void drivers::FIFOBroadcast(Parser &parser) noexcept
 
     for (unsigned long i = 0; i < n_messages; ++i)
     {
-        fifo->Send("m");
+        fifo->Send("");
     }
 
     WaitForever();
