@@ -8,5 +8,5 @@ struct Shared
     std::shared_mutex mutex;
     T data;
 
-    Shared() noexcept = default;
+    Shared() = default;
 };
