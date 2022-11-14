@@ -96,7 +96,7 @@ void drivers::PerfectLinks(Parser &parser) noexcept
         auto basic_manager = dynamic_cast<PerfectLink::BasicManager *>(manager.get());
         for (unsigned long i = 0; i < n_messages; ++i)
         {
-            basic_manager->Send(target_host.id, std::to_string(i));
+            basic_manager->Send(target_host.id, "m");
         }
     }
     else

@@ -50,7 +50,7 @@ void UDPServer::Receive() noexcept
         buffer[bytes] = '\0';
         if (bytes > 0)
         {
-            NotifyAll(std::string(buffer), addr);
+            NotifyAll(buffer, addr);
         }
     }
 }
@@ -62,7 +62,7 @@ void UDPServer::Attach(Observer *obs, sockaddr_in addr) noexcept
     observers_.mutex.unlock();
 }
 
-void UDPServer::NotifyAll(const std::string &msg, sockaddr_in addr)
+void UDPServer::NotifyAll(const char *bytes, sockaddr_in addr)
 {
     observers_.mutex.lock_shared();
     std::vector<Observer*> observers(observers_.data[Machine{addr.sin_addr.s_addr, addr.sin_port}]);
@@ -70,7 +70,7 @@ void UDPServer::NotifyAll(const std::string &msg, sockaddr_in addr)
 
     for (const auto &obs : observers)
     {
-        obs->Notify(msg);
+        obs->Notify(bytes);
     }
 }
 

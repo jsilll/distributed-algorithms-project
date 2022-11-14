@@ -34,9 +34,9 @@ UDPClient::~UDPClient() noexcept
     }
 }
 
-ssize_t UDPClient::Send(const std::string &msg, sockaddr_in to_addr) const
+ssize_t UDPClient::Send(const char *bytes, std::size_t len, sockaddr_in to_addr) const
 {
-    ssize_t res = sendto(sockfd_, msg.c_str(), msg.size(), 0, reinterpret_cast<struct sockaddr *>(&to_addr), sizeof(to_addr));
+    ssize_t res = sendto(sockfd_, bytes, len, 0, reinterpret_cast<struct sockaddr *>(&to_addr), sizeof(to_addr));
 
     if (res < 0)
     {

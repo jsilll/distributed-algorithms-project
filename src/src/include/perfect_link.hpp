@@ -23,6 +23,12 @@ class PerfectLink final : public UDPServer::Observer
 public:
     typedef unsigned long int Id;
 
+    enum PacketType : bool
+    {
+        ACK,
+        MSG,
+    };
+
     struct Message
     {
         typedef unsigned long int Id;
@@ -98,8 +104,7 @@ public:
     };
 
 private:
-    static constexpr int kAckSize = 14;
-    static constexpr int kMsgPrefixSize = 23;
+    static constexpr int kPacketPrefixSize = sizeof(PacketType) + sizeof(Message::Id);
 
     /**
      * @brief This value should be the result of:
@@ -149,6 +154,8 @@ private:
     void CleanAcks() noexcept;
     void SendMessages();
 
-    void Notify(const std::string &msg) noexcept override;
-    static std::optional<std::variant<Message, Ack>> Parse(const std::string &msg) noexcept;
+    void Notify(const char *bytes) noexcept override;
+
+    static void EncodeMetadata(PacketType type, Message::Id id, char *buffer) noexcept; 
+    static std::optional<std::variant<Message, Ack>> Parse(const char *bytes) noexcept;
 };

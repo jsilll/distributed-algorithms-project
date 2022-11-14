@@ -21,7 +21,7 @@ public:
 
     ~UDPClient() noexcept;
 
-    [[nodiscard]] ssize_t Send(const std::string &msg, sockaddr_in to_addr) const;
+    [[nodiscard]] ssize_t Send(const char *bytes, std::size_t len, sockaddr_in to_addr) const;
 
     static sockaddr_in Address(in_addr_t ip, unsigned short port) noexcept;
 };
