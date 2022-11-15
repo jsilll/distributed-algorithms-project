@@ -136,9 +136,6 @@ private:
 
                 if (majority_seen && not_delivered)
                 {
-                    pending_for_broadcast_.mutex.lock_shared();
-                    auto &msg = pending_for_broadcast_.data.front();
-                    pending_for_broadcast_.mutex.unlock_shared();
 
                     pending_for_delivery_.mutex.lock();
                     pending_for_delivery_.data.erase(id);
@@ -148,15 +145,20 @@ private:
                     std::size_t n_ideal_pending_for_delivery = std::max(1, static_cast<int>(URB_MAX_MSGS_IN_NETWORK / std::pow(n_processes_.load(), 2)));
                     if (n_pending_for_delivery < n_ideal_pending_for_delivery)
                     {
-                        pending_for_delivery_.mutex.lock();
-                        pending_for_delivery_.data.insert(msg.id);
-                        pending_for_delivery_.mutex.unlock();
-
                         pending_for_broadcast_.mutex.lock();
-                        pending_for_broadcast_.data.pop();
+                        bool pending_for_broadcast_not_empty = !pending_for_broadcast_.data.empty();
+                        auto &msg = pending_for_broadcast_.data.front();
+                        if (pending_for_broadcast_not_empty)
+                            pending_for_broadcast_.data.pop();
                         pending_for_broadcast_.mutex.unlock();
 
-                        BestEffortBroadcast::SendInternal(msg);
+                        if (pending_for_broadcast_not_empty)
+                        {
+                            pending_for_delivery_.mutex.lock();
+                            pending_for_delivery_.data.insert(msg.id);
+                            pending_for_delivery_.mutex.unlock();
+                            BestEffortBroadcast::SendInternal(msg);
+                        }
                     }
 
                     delivered_.mutex.lock();
