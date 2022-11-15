@@ -14,7 +14,13 @@
 void PerfectLink::Manager::Start() noexcept
 {
     on_.store(true);
+#ifdef DEBUG
+    std::cout << "[DBUG] Creating new thread: PerfectLink::Manager::SendAcks\n";
+#endif
     ack_thread_ = std::thread(&PerfectLink::Manager::SendAcks, this);
+#ifdef DEBUG
+    std::cout << "[DBUG] Creating new thread: PerfectLink::Manager::SendMessages\n";
+#endif
     send_thread_ = std::thread(&PerfectLink::Manager::SendMessages, this);
 }
 

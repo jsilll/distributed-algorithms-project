@@ -26,6 +26,9 @@ UDPServer::UDPServer(in_addr_t ip, in_port_t port)
 void UDPServer::Start() noexcept
 {
     on_.store(true);
+#ifdef DEBUG
+    std::cout << "[DBUG] Creating new thread: UDPServer::Receive\n";
+#endif
     receive_thread_ = std::thread(&UDPServer::Receive, this);
 }
 
@@ -67,7 +70,7 @@ void UDPServer::Attach(Observer *obs, sockaddr_in addr) noexcept
 void UDPServer::NotifyAll(const std::vector<char> &bytes, sockaddr_in addr)
 {
     observers_.mutex.lock_shared();
-    std::vector<Observer*> observers(observers_.data[Machine{addr.sin_addr.s_addr, addr.sin_port}]);
+    std::vector<Observer *> observers(observers_.data[Machine{addr.sin_addr.s_addr, addr.sin_port}]);
     observers_.mutex.unlock_shared();
 
     for (const auto &obs : observers)

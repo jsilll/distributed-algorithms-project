@@ -50,6 +50,9 @@ public:
     void Start() noexcept override
     {
         Broadcast::Start();
+#ifdef DEBUG
+        std::cout << "[DBUG] Creating new thread: UniformReliableBroadcast::DeliverPending\n";
+#endif
         deliver_thread_ = std::thread(&UniformReliableBroadcast::DeliverPending, this);
     }
 
@@ -61,7 +64,7 @@ protected:
         pending_for_delivery_.mutex.unlock_shared();
 
         std::size_t n_ideal_pending_for_delivery = std::max(1, static_cast<int>(URB_MAX_MSGS_IN_NETWORK / std::pow(n_processes_.load(), 2)));
-        if (n_pending_for_delivery > n_ideal_pending_for_delivery)
+        if (n_pending_for_delivery >= n_ideal_pending_for_delivery)
         {
             pending_for_broadcast_.mutex.lock_shared();
             pending_for_broadcast_.data.push(msg);
