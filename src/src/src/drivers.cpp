@@ -43,7 +43,7 @@ void drivers::PerfectLinks(Parser &parser) noexcept
 {
     auto id = parser.id();
     auto hosts = parser.hosts();
-    auto n_messages = parser.n_messages();
+    auto n_messages = parser.n_messages_to_send();
     auto local_host = parser.local_host();
     auto target_host = parser.target_host();
 
@@ -94,7 +94,7 @@ void drivers::PerfectLinks(Parser &parser) noexcept
         std::cout << "[INFO] ================" << std::endl;
 
         auto basic_manager = dynamic_cast<PerfectLink::BasicManager *>(manager.get());
-        for (unsigned long i = 0; i < n_messages; ++i)
+        for (unsigned int i = 0; i < n_messages; ++i)
         {
             basic_manager->Send(target_host.id, "");
         }
@@ -138,7 +138,7 @@ void drivers::FIFOBroadcast(Parser &parser) noexcept
 {
     auto id = parser.id();
     auto hosts = parser.hosts();
-    auto n_messages = parser.n_messages();
+    auto n_messages = parser.n_messages_to_send();
     auto local_host = parser.local_host();
 
     std::cout << "[INFO] FIFO Broadcast Mode Activated\n";
@@ -161,7 +161,7 @@ void drivers::FIFOBroadcast(Parser &parser) noexcept
         std::exit(EXIT_FAILURE);
     }
 
-    auto fifo = dynamic_cast<UniformFIFOBroadcast*>(manager.get());
+    auto fifo = dynamic_cast<UniformFIFOBroadcast *>(manager.get());
 
     for (const auto &peer : hosts)
     {
@@ -188,7 +188,7 @@ void drivers::FIFOBroadcast(Parser &parser) noexcept
     server.value().Start();
     fifo->Start();
 
-    for (unsigned long i = 0; i < n_messages; ++i)
+    for (unsigned int i = 0; i < n_messages; ++i)
     {
         fifo->Send("");
     }

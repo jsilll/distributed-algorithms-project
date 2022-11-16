@@ -5,7 +5,9 @@
 
 #include "best_effort_broadcast.hpp"
 
-#define URB_MAX_MSGS_IN_NETWORK (1 << 14)
+// Considering the max load on the system will be 2**21
+// total broadcast messages, lets try to batch that in 64 batches
+#define URB_MAX_MSGS_IN_NETWORK (1 << 15) 
 
 /**
  * @brief
@@ -24,13 +26,14 @@ class UniformReliableBroadcast : public BestEffortBroadcast
 protected:
     static constexpr int kFinishDeliveringAllMs = 250;
 
+private:
+    std::thread deliver_thread_;
+
 protected:
     Shared<std::queue<Broadcast::Message>> pending_for_broadcast_;
     Shared<std::unordered_set<Broadcast::Message::Id>> delivered_;
     Shared<std::unordered_set<Broadcast::Message::Id>> pending_for_delivery_;
     Shared<std::unordered_map<Message::Id, std::unordered_set<PerfectLink::Id>>> ack_;
-
-    std::thread deliver_thread_;
 
 public:
     explicit UniformReliableBroadcast(Logger &logger, PerfectLink::Id id) noexcept
@@ -75,7 +78,6 @@ protected:
         pending_for_delivery_.mutex.lock();
         pending_for_delivery_.data.insert(msg.id);
         pending_for_delivery_.mutex.unlock();
-
         BestEffortBroadcast::SendInternal(msg);
     }
 
@@ -121,7 +123,7 @@ private:
         while (on_.load())
         {
             pending_for_delivery_.mutex.lock();
-            auto pending_messages = std::vector<Broadcast::Message::Id>(pending_for_delivery_.data.begin(), pending_for_delivery_.data.end());
+            std::vector<Broadcast::Message::Id> pending_messages(pending_for_delivery_.data.begin(), pending_for_delivery_.data.end());
 #ifdef DEBUG
             std::cout << "[DBUG] URB Pending: " << pending_for_delivery_.data.size() << "\n";
 #endif
@@ -139,7 +141,6 @@ private:
 
                 if (majority_seen && not_delivered)
                 {
-
                     pending_for_delivery_.mutex.lock();
                     pending_for_delivery_.data.erase(id);
                     std::size_t n_pending_for_delivery = pending_for_delivery_.data.size();
@@ -152,7 +153,9 @@ private:
                         bool pending_for_broadcast_not_empty = !pending_for_broadcast_.data.empty();
                         auto &msg = pending_for_broadcast_.data.front();
                         if (pending_for_broadcast_not_empty)
+                        {
                             pending_for_broadcast_.data.pop();
+                        }
                         pending_for_broadcast_.mutex.unlock();
 
                         if (pending_for_broadcast_not_empty)
@@ -174,7 +177,7 @@ private:
 #ifdef DEBUG
                     std::cout << "[DBUG] URB Delivering: " << id.author << " " << id.seq << "\n";
 #endif
-                    DeliverInternal(id, true); // Call the most specified Deliver Internal Possible
+                    DeliverInternal(id, true);
                 }
             }
 

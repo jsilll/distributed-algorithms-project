@@ -15,7 +15,7 @@
 
 #include "shared.hpp"
 
-#define UDP_SERVER_MAX_MSG_SIZE 32
+#define UDP_SERVER_MAX_MSG_SIZE 14
 
 class UDPClient;
 
@@ -43,7 +43,7 @@ struct Machine
 template <>
 struct std::hash<Machine>
 {
-    inline std::size_t operator()(const Machine  &m) const noexcept
+    inline std::size_t operator()(const Machine &m) const noexcept
     {
         std::size_t h1 = std::hash<in_addr_t>{}(m.ip);
         std::size_t h2 = std::hash<in_port_t>{}(m.port);

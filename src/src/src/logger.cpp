@@ -6,7 +6,7 @@ Logger::Logger(const std::string &fname)
 }
 
 Logger::~Logger() noexcept
-{   
+{
     mutex_.lock();
     file_.close();
     mutex_.unlock();

@@ -38,8 +38,8 @@ inline bool IsPositiveNumber(const std::string &s)
                                       { return !std::isdigit(c); }) == s.end();
 }
 
-Parser::Host::Host(size_t id, std::string &ip_or_hostname, unsigned short port)
-    : id{id}, port{htons(port)}
+Parser::Host::Host(std::string &ip_or_hostname, in_port_t port, unsigned int id)
+    : port{htons(port)}, id{id}
 {
     if (IsValidAddress(ip_or_hostname.c_str()))
     {
@@ -173,19 +173,19 @@ std::vector<Parser::Host> Parser::hosts() const
     return hosts_;
 }
 
-unsigned long Parser::id() const
+unsigned int Parser::id() const
 {
     CheckParsed();
     return id_;
 }
 
-unsigned long Parser::n_messages() const
+unsigned int Parser::n_messages_to_send() const
 {
     CheckParsed();
-    return n_messages_sent_;
+    return n_messages_to_send_;
 }
 
-unsigned long Parser::target_id() const
+unsigned int Parser::target_id() const
 {
     CheckParsed();
     return receiver_id_;
@@ -279,7 +279,7 @@ bool Parser::ParseId() noexcept
         {
             try
             {
-                id_ = std::stoul(argv_[2]);
+                id_ = std::max(0, std::stoi(argv_[2]));
             }
             catch (std::invalid_argument const &e)
             {
@@ -395,7 +395,7 @@ void Parser::ParseHostsFile()
         }
 
         std::string ip;
-        unsigned long id;
+        unsigned int id;
         unsigned short port;
         if (!(iss >> id >> ip >> port))
         {
@@ -407,7 +407,7 @@ void Parser::ParseHostsFile()
 #ifdef DEBUG
         std::cout << "[DEBUG] Reading Host: " << id << " " << ip << " " << port << std::endl;
 #endif
-        hosts_.emplace_back(id, ip, port);
+        hosts_.emplace_back(ip, port, id);
     }
 
     if (hosts_.size() < 2UL)
@@ -468,7 +468,7 @@ void Parser::ParseConfigFile()
     switch (exec_mode_)
     {
     case kPerfectLinks:
-        if (!(iss >> n_messages_sent_ >> receiver_id_))
+        if (!(iss >> n_messages_to_send_ >> receiver_id_))
         {
             std::ostringstream os;
             os << "Parsing for `" << config_path() << "` failed at line 1";
@@ -477,13 +477,13 @@ void Parser::ParseConfigFile()
 
         break;
     case kFIFOBroadcast:
-        if (!(iss >> n_messages_sent_))
+        if (!(iss >> n_messages_to_send_))
         {
             std::ostringstream os;
             os << "Parsing for `" << config_path() << "` failed at line 1";
             throw std::invalid_argument(os.str());
         }
-    break;
+        break;
 
     default:
         throw std::runtime_error("Invalid execution mode.");

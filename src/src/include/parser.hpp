@@ -13,10 +13,10 @@ public:
   {
 
     in_addr_t ip;
-    unsigned long id;
-    unsigned short port;
+    in_port_t port;
+    unsigned int id;
 
-    Host(size_t id, std::string &ip_or_hostname, unsigned short port);
+    Host(std::string &ip_or_hostname, in_port_t port, unsigned int id);
 
     [[nodiscard]] std::string ip_readable() const;
     [[nodiscard]] unsigned short port_readable() const;
@@ -44,9 +44,9 @@ private:
 
   std::vector<Host> hosts_;
 
-  unsigned long id_{};
-  unsigned long n_messages_sent_{};
-  unsigned long receiver_id_{};
+  unsigned id_{};
+  unsigned receiver_id_{};
+  unsigned n_messages_to_send_{};
 
   ExecMode exec_mode_{kFIFOBroadcast};
 
@@ -60,9 +60,9 @@ public:
   [[nodiscard]] std::string hosts_path() const;
   [[nodiscard]] std::string output_path() const;
   [[nodiscard]] std::vector<Host> hosts() const;
-  [[nodiscard]] unsigned long id() const;
-  [[nodiscard]] unsigned long n_messages() const;
-  [[nodiscard]] unsigned long target_id() const;
+  [[nodiscard]] unsigned int id() const;
+  [[nodiscard]] unsigned int n_messages_to_send() const;
+  [[nodiscard]] unsigned int target_id() const;
   [[nodiscard]] ExecMode exec_mode() const noexcept;
   [[nodiscard]] Host local_host() const;
   [[nodiscard]] Host target_host() const;

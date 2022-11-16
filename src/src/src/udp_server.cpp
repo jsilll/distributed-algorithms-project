@@ -72,7 +72,6 @@ void UDPServer::NotifyAll(const std::vector<char> &bytes, sockaddr_in addr)
     observers_.mutex.lock_shared();
     std::vector<Observer *> observers(observers_.data[Machine{addr.sin_addr.s_addr, addr.sin_port}]);
     observers_.mutex.unlock_shared();
-
     for (const auto &obs : observers)
     {
         obs->Notify(bytes);

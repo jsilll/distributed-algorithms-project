@@ -13,10 +13,9 @@ namespace drivers
     /**
      * @brief Responsible for stopping
      * all the threads (if there any running)
-     * 
+     *
      */
     void StopExecution() noexcept;
-
 
     /**
      * @brief Responsible for executing

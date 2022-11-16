@@ -4,9 +4,10 @@
 
 void Broadcast::Send(const std::string &msg) noexcept
 {
-    Message message = {{n_messages_sent_.fetch_add(1), id_}, id_,  std::vector<char>(msg.begin(), msg.end())};
-    SendInternal(message); // Virtual Call
-    LogSend(message.id.seq);
+    Message::Id::Seq seq = n_messages_sent_.fetch_add(1);
+    Message message = {{seq, id_}, id_, {msg.begin(), msg.end()}};
+    LogSend(seq);
+    SendInternal(message);
 }
 
 void Broadcast::Notify(PerfectLink::Id sender_id, const PerfectLink::Message &msg) noexcept
