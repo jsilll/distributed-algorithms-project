@@ -141,11 +141,13 @@ public:
               UDPServer &server,
               UDPClient &client);
 
+  inline Id target_id() const noexcept
+  {
+    return target_id_;
+  }
+
   Message::Seq Send(const std::string &msg) noexcept;
   Message::Seq Send(const char *payload, std::size_t len) noexcept;
-
-protected:
-  friend class PerfectLink::Manager;
 
   void Subscribe(Manager *manager) noexcept;
 

@@ -7,7 +7,7 @@
 
 // Considering the max load on the system will be 2**21
 // total broadcast messages, lets try to batch that in 64 batches
-#define URB_MAX_MSGS_IN_NETWORK (1 << 15) 
+#define URB_MAX_MSGS_IN_NETWORK (1 << 14)
 
 /**
  * @brief
@@ -30,6 +30,8 @@ private:
     std::thread deliver_thread_;
 
 protected:
+    std::atomic_uint n_own_pending_for_delivery_{0};
+    std::atomic_uint n_own_pending_delivery_ideal_{1};
     Shared<std::queue<Broadcast::Message>> pending_for_broadcast_;
     Shared<std::unordered_set<Broadcast::Message::Id>> delivered_;
     Shared<std::unordered_set<Broadcast::Message::Id>> pending_for_delivery_;
@@ -59,15 +61,23 @@ public:
         deliver_thread_ = std::thread(&UniformReliableBroadcast::DeliverPending, this);
     }
 
+    void Add(std::unique_ptr<PerfectLink> pl) noexcept
+    {
+        const PerfectLink::Id id = pl->target_id();
+
+        perfect_links_.mutex.lock();
+        perfect_links_.data[id] = std::move(pl);
+        perfect_links_.data[id]->Subscribe(this);
+        perfect_links_.mutex.unlock();
+
+        n_processes_.fetch_add(1);
+        n_own_pending_delivery_ideal_.store(std::max(1, static_cast<int>(URB_MAX_MSGS_IN_NETWORK / std::pow(n_processes_.load(), 2))));
+    }
+
 protected:
     void SendInternal(const Broadcast::Message &msg) noexcept override
     {
-        pending_for_delivery_.mutex.lock_shared();
-        std::size_t n_pending_for_delivery = pending_for_delivery_.data.size();
-        pending_for_delivery_.mutex.unlock_shared();
-
-        std::size_t n_ideal_pending_for_delivery = std::max(1, static_cast<int>(URB_MAX_MSGS_IN_NETWORK / std::pow(n_processes_.load(), 2)));
-        if (n_pending_for_delivery >= n_ideal_pending_for_delivery)
+        if (n_own_pending_for_delivery_.load() >= n_own_pending_delivery_ideal_.load())
         {
             pending_for_broadcast_.mutex.lock_shared();
             pending_for_broadcast_.data.push(msg);
@@ -78,6 +88,12 @@ protected:
         pending_for_delivery_.mutex.lock();
         pending_for_delivery_.data.insert(msg.id);
         pending_for_delivery_.mutex.unlock();
+
+#ifdef DEBUG
+    std::cerr << "[DBUG] URB: Actually broadcasting message " << msg.id.seq << " now\n";
+#endif
+        n_own_pending_for_delivery_.fetch_add(1);
+
         BestEffortBroadcast::SendInternal(msg);
     }
 
@@ -143,11 +159,9 @@ private:
                 {
                     pending_for_delivery_.mutex.lock();
                     pending_for_delivery_.data.erase(id);
-                    std::size_t n_pending_for_delivery = pending_for_delivery_.data.size();
                     pending_for_delivery_.mutex.unlock();
 
-                    std::size_t n_ideal_pending_for_delivery = std::max(1, static_cast<int>(URB_MAX_MSGS_IN_NETWORK / std::pow(n_processes_.load(), 2)));
-                    if (n_pending_for_delivery < n_ideal_pending_for_delivery)
+                    if (id.author == id_ && (n_own_pending_for_delivery_.fetch_add(-1) - 1) < n_own_pending_delivery_ideal_.load())
                     {
                         pending_for_broadcast_.mutex.lock();
                         bool pending_for_broadcast_not_empty = !pending_for_broadcast_.data.empty();
@@ -163,6 +177,12 @@ private:
                             pending_for_delivery_.mutex.lock();
                             pending_for_delivery_.data.insert(msg.id);
                             pending_for_delivery_.mutex.unlock();
+
+#ifdef DEBUG
+    std::cerr << "[DBUG] URB: Actually broadcasting message " << msg.id.seq << " now\n";
+#endif
+                            n_own_pending_for_delivery_.fetch_add(1);
+                            
                             BestEffortBroadcast::SendInternal(msg);
                         }
                     }

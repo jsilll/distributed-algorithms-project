@@ -36,7 +36,7 @@ void PerfectLink::Manager::Stop() noexcept
 
 void PerfectLink::Manager::Add(std::unique_ptr<PerfectLink> pl) noexcept
 {
-  const PerfectLink::Id id = pl->target_id_;
+  const PerfectLink::Id id = pl->target_id();
 
   perfect_links_.mutex.lock();
   perfect_links_.data[id] = std::move(pl);
