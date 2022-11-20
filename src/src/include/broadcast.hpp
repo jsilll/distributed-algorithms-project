@@ -50,7 +50,6 @@ public:
   ~Broadcast() noexcept override = default;
 
   void Send(const std::string &msg) noexcept;
-  void Send(const std::string &msg, const std::unordered_set<PerfectLink::Id> blacklist) noexcept;
 
 protected:
   void Notify(PerfectLink::Id sender_id, const PerfectLink::Message &msg) noexcept final;

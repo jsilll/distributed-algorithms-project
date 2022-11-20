@@ -231,9 +231,17 @@ void PerfectLink::CleanAcks() noexcept
 void PerfectLink::SendMessages()
 {
 #ifdef DEBUG
-  std::cerr << "[DBUG] acks_to_send_: " << acks_to_send_.data.size()
-            << " messages_to_send_: " << messages_to_send_.data.size()
-            << " messages_delivered_: " << messages_delivered_.data.size() << "\n";
+  acks_to_send_.mutex.lock_shared();
+  std::cerr << "[DBUG] PerfectLink: acks_to_send_: " << acks_to_send_.data.size();
+  acks_to_send_.mutex.unlock_shared();
+
+  messages_to_send_.mutex.lock_shared();
+  std::cerr << " messages_to_send_: " << messages_to_send_.data.size();
+  messages_to_send_.mutex.unlock_shared();
+
+  messages_delivered_.mutex.lock_shared();
+  std::cerr << " messages_delivered_: " << messages_delivered_.data.size() << "\n";
+  messages_delivered_.mutex.unlock_shared();
 #endif
 
   messages_to_send_.mutex.lock_shared();
