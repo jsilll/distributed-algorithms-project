@@ -47,7 +47,7 @@ protected:
 #ifdef DEBUG
         if (msg.id.author == id_)
         {
-            std::cerr << "[DBUG] Best Effort Broadcast sending message " << msg.id.seq << " of size: " << len << "\n";
+            std::cout << "[DBUG] Best Effort Broadcast sending message " << msg.id.seq << " of size: " << len << "\n";
         }
 #endif
 

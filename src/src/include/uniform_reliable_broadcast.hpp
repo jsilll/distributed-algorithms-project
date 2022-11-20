@@ -93,7 +93,7 @@ protected:
         pending_for_delivery_.mutex.unlock();
 
 #ifdef DEBUG
-        std::cerr << "[DBUG] URB: Actually broadcasting message " << msg.id.seq << " now\n";
+        std::cout << "[DBUG] URB: Actually broadcasting message " << msg.id.seq << " now\n";
 #endif
         n_own_pending_for_delivery_.fetch_add(1);
 
@@ -200,7 +200,7 @@ private:
                             pending_for_delivery_.mutex.unlock();
 
 #ifdef DEBUG
-                            std::cerr << "[DBUG] URB: Actually broadcasting message " << msg.id.seq << " now\n";
+                            std::cout << "[DBUG] URB: Actually broadcasting message " << msg.id.seq << " now\n";
 #endif
                             n_own_pending_for_delivery_.fetch_add(1);
 
