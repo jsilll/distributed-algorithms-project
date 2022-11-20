@@ -82,7 +82,7 @@ public:
 
     virtual ~Manager() noexcept = default;
 
-    void Add(std::unique_ptr<PerfectLink> pl) noexcept;
+      virtual void Add(std::unique_ptr<PerfectLink> pl) noexcept;
 
     virtual void Stop() noexcept;
     virtual void Start() noexcept;
@@ -112,6 +112,12 @@ private:
    *
    */
   static constexpr double kStopSendingAcksTimeoutSec = static_cast<double>(Manager::kFinishSendingAllMsgsMs + 250 + 100) / 1000.0;
+
+  /**
+   * @brief Give 20 cycles before forgetting about having received this messages 
+   * 
+   */
+  static constexpr double kRemoveFromDelivered = kStopSendingAcksTimeoutSec * 20; 
 
 private:
   const Id id_;

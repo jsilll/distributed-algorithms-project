@@ -7,7 +7,7 @@
 
 // Considering the max load on the system will be 2**21
 // total broadcast messages, lets try to batch that in 64 batches
-#define URB_MAX_MSGS_IN_NETWORK (1 << 14)
+#define URB_MAX_MSGS_IN_NETWORK (1 << 15)
 
 /**
  * @brief
@@ -32,10 +32,11 @@ private:
 protected:
     std::atomic_uint n_own_pending_for_delivery_{0};
     std::atomic_uint n_own_pending_delivery_ideal_{1};
-    Shared<std::queue<Broadcast::Message>> pending_for_broadcast_;
+    Shared<std::queue<Broadcast::Message>> own_pending_for_broadcast_;
+    
     Shared<std::unordered_set<Broadcast::Message::Id>> delivered_;
     Shared<std::unordered_set<Broadcast::Message::Id>> pending_for_delivery_;
-    Shared<std::unordered_map<Message::Id, std::unordered_set<PerfectLink::Id>>> ack_;
+    Shared<std::unordered_map<Message::Id, std::unordered_set<PerfectLink::Id>>> acks_;
 
 public:
     explicit UniformReliableBroadcast(Logger &logger, PerfectLink::Id id) noexcept
@@ -71,7 +72,9 @@ public:
         perfect_links_.mutex.unlock();
 
         n_processes_.fetch_add(1);
-        n_own_pending_delivery_ideal_.store(std::max(1, static_cast<int>(URB_MAX_MSGS_IN_NETWORK / std::pow(n_processes_.load(), 2))));
+        n_own_pending_delivery_ideal_.store(static_cast<unsigned int>(std::max(1, static_cast<int>(URB_MAX_MSGS_IN_NETWORK /
+                                                                                        std::pow(n_processes_.load(),
+                                                                                                 2)))));
     }
 
 protected:
@@ -79,9 +82,9 @@ protected:
     {
         if (n_own_pending_for_delivery_.load() >= n_own_pending_delivery_ideal_.load())
         {
-            pending_for_broadcast_.mutex.lock_shared();
-            pending_for_broadcast_.data.push(msg);
-            pending_for_broadcast_.mutex.unlock_shared();
+            own_pending_for_broadcast_.mutex.lock_shared();
+            own_pending_for_broadcast_.data.push(msg);
+            own_pending_for_broadcast_.mutex.unlock_shared();
             return;
         }
 
@@ -101,9 +104,9 @@ protected:
     {
         BestEffortBroadcast::NotifyInternal(msg);
 
-        ack_.mutex.lock();
-        ack_.data[msg.id].insert(msg.sender);
-        ack_.mutex.unlock();
+        acks_.mutex.lock();
+        acks_.data[msg.id].insert(msg.sender);
+        acks_.mutex.unlock();
 
         pending_for_delivery_.mutex.lock_shared();
         bool not_pending = pending_for_delivery_.data.count(msg.id) == 0;
@@ -147,9 +150,9 @@ private:
 
             for (const auto id : pending_messages)
             {
-                ack_.mutex.lock();
-                bool majority_seen = (ack_.data[id].size() + 1) > static_cast<std::size_t>(std::floor(n_processes_.load() / 2));
-                ack_.mutex.unlock();
+                acks_.mutex.lock();
+                bool majority_seen = (acks_.data[id].size() + 1) > static_cast<std::size_t>(std::floor(n_processes_.load() / 2));
+                acks_.mutex.unlock();
 
                 delivered_.mutex.lock_shared();
                 bool not_delivered = delivered_.data.count(id) == 0;
@@ -161,16 +164,16 @@ private:
                     pending_for_delivery_.data.erase(id);
                     pending_for_delivery_.mutex.unlock();
 
-                    if (id.author == id_ && (n_own_pending_for_delivery_.fetch_add(-1) - 1) < n_own_pending_delivery_ideal_.load())
+                    if (id.author == id_ && (n_own_pending_for_delivery_.fetch_add(static_cast<unsigned int>(-1)) - 1) < n_own_pending_delivery_ideal_.load())
                     {
-                        pending_for_broadcast_.mutex.lock();
-                        bool pending_for_broadcast_not_empty = !pending_for_broadcast_.data.empty();
-                        auto &msg = pending_for_broadcast_.data.front();
+                        own_pending_for_broadcast_.mutex.lock();
+                        bool pending_for_broadcast_not_empty = !own_pending_for_broadcast_.data.empty();
+                        auto &msg = own_pending_for_broadcast_.data.front();
                         if (pending_for_broadcast_not_empty)
                         {
-                            pending_for_broadcast_.data.pop();
+                            own_pending_for_broadcast_.data.pop();
                         }
-                        pending_for_broadcast_.mutex.unlock();
+                        own_pending_for_broadcast_.mutex.unlock();
 
                         if (pending_for_broadcast_not_empty)
                         {
@@ -191,9 +194,9 @@ private:
                     delivered_.data.insert(id);
                     delivered_.mutex.unlock();
 
-                    ack_.mutex.lock();
-                    ack_.data.erase(id);
-                    ack_.mutex.unlock();
+                    acks_.mutex.lock();
+                    acks_.data.erase(id);
+                    acks_.mutex.unlock();
 #ifdef DEBUG
                     std::cout << "[DBUG] URB Delivering: " << id.author << " " << id.seq << "\n";
 #endif

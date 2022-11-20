@@ -50,6 +50,7 @@ public:
   ~Broadcast() noexcept override = default;
 
   void Send(const std::string &msg) noexcept;
+  void Send(const std::string &msg, const std::unordered_set<PerfectLink::Id> blacklist) noexcept;
 
 protected:
   void Notify(PerfectLink::Id sender_id, const PerfectLink::Message &msg) noexcept final;
@@ -62,7 +63,7 @@ protected:
   virtual void DeliverInternal(const Broadcast::Message::Id &id, bool log) = 0;
 
 private:
-  void LogSend(const Broadcast::Message::Id::Seq seq) noexcept;
+  void LogSend(Broadcast::Message::Id::Seq seq) noexcept;
 
 protected:
   void LogDeliver(const Broadcast::Message::Id &id) noexcept;

@@ -279,7 +279,7 @@ bool Parser::ParseId() noexcept
         {
             try
             {
-                id_ = std::max(0, std::stoi(argv_[2]));
+                id_ = static_cast<unsigned int>(std::max(0, std::stoi(argv_[2])));
             }
             catch (std::invalid_argument const &e)
             {

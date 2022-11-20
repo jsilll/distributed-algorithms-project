@@ -1,7 +1,6 @@
 #include "udp_server.hpp"
 
 #include <string>
-#include <unistd.h>
 #include <iostream>
 #include <arpa/inet.h>
 #include <sys/socket.h>

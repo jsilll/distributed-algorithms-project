@@ -3,8 +3,6 @@
 #include <algorithm>
 #include <list>
 #include <sstream>
-#include <stdexcept>
-#include <string>
 #include <thread>
 
 #ifdef DEBUG
@@ -193,30 +191,51 @@ void PerfectLink::SendAcks()
 
 void PerfectLink::CleanAcks() noexcept
 {
-  std::vector<Message::Seq> acks_to_remove;
+  struct AckToRemove
+  {
+    Message::Seq seq;
+    bool remove_from_delivered;
+  };
+
+  std::vector<AckToRemove> acks_to_remove;
 
   messages_delivered_.mutex.lock_shared();
   time_t now = std::time(nullptr);
-  for (auto const &msg : messages_delivered_.data)
+  for (const auto &msg : messages_delivered_.data)
   {
     auto delta = std::difftime(now, msg.second);
     if (delta >= kStopSendingAcksTimeoutSec)
     {
-      acks_to_remove.push_back(msg.first);
+      acks_to_remove.push_back({msg.first, delta >= kRemoveFromDelivered});
     }
   }
+
+  for (const auto &ack_to_remove : acks_to_remove)
+  {
+    if (ack_to_remove.remove_from_delivered)
+    {
+      messages_delivered_.data.erase(ack_to_remove.seq);
+    }
+  }
+
   messages_delivered_.mutex.unlock_shared();
 
   acks_to_send_.mutex.lock();
-  for (auto const &ack_id : acks_to_remove)
+  for (auto const &ack_to_remove : acks_to_remove)
   {
-    acks_to_send_.data.erase({ack_id});
+    acks_to_send_.data.erase({ack_to_remove.seq});
   }
   acks_to_send_.mutex.unlock();
 }
 
 void PerfectLink::SendMessages()
 {
+#ifdef DEBUG
+  std::cerr << "[DBUG] acks_to_send_: " << acks_to_send_.data.size()
+            << " messages_to_send_: " << messages_to_send_.data.size()
+            << " messages_delivered_: " << messages_delivered_.data.size() << "\n";
+#endif
+
   messages_to_send_.mutex.lock_shared();
 
   if (messages_to_send_.data.empty())

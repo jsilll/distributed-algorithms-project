@@ -1,6 +1,5 @@
 #include "udp_client.hpp"
 
-#include <string>
 #include <cstring>
 #include <unistd.h>
 #include <stdexcept>
