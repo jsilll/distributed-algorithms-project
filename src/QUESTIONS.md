@@ -1,1 +1,3 @@
-# How long should it take for all the processes deliver all the messages when the system is maxed out? n = 128 and m = 127
+- What's the third delivery?
+# Assumptions:
+- Perfect Links Assumption for forgetting delivered messages.

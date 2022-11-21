@@ -1,6 +1,5 @@
 #pragma once
 
-#include <mutex>
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -8,11 +7,10 @@
 class Logger
 {
 private:
-    std::mutex mutex_;
     std::ofstream file_;
 
 public:
-    explicit Logger(const std::string &fname);
+    explicit Logger(const std::string &fname, bool thread_safe = true);
 
     ~Logger() noexcept;
 
@@ -28,12 +26,10 @@ public:
 
     inline friend Logger &operator<<(Logger &logger, const std::string &text) noexcept
     {
-        logger.mutex_.lock();
-        logger.file_ << text << std::endl;
+        logger.file_ << text << "\n";
 #ifdef DEBUG
         std::cout << "[DLOG] " << text << "\n";
 #endif
-        logger.mutex_.unlock();
         return logger;
     }
 };

@@ -1,15 +1,14 @@
 #include "logger.hpp"
 
-Logger::Logger(const std::string &fname)
+Logger::Logger(const std::string &fname, bool thread_safe)
 {
+    std::ios::sync_with_stdio(thread_safe);
     file_.open(fname);
 }
 
 Logger::~Logger() noexcept
 {
-    mutex_.lock();
     file_.close();
-    mutex_.unlock();
 }
 
 void Logger::Open(const std::string &fname) noexcept
@@ -24,7 +23,5 @@ void Logger::Open(const std::string &fname) noexcept
 
 void Logger::Flush() noexcept
 {
-    mutex_.lock();
     file_ << std::flush;
-    mutex_.unlock();
 }

@@ -57,7 +57,7 @@ void drivers::PerfectLinks(Parser &parser) noexcept
 
     try
     {
-        logger.emplace(parser.output_path());
+        logger.emplace(parser.output_path(), false);
         server.emplace(local_host.ip, local_host.port);
         client.emplace(server.value().sockfd());
         manager = std::make_unique<PerfectLink::BasicManager>(logger.value());
@@ -150,7 +150,7 @@ void drivers::FIFOBroadcast(Parser &parser) noexcept
 
     try
     {
-        logger.emplace(parser.output_path());
+        logger.emplace(parser.output_path(), false);
         server.emplace(local_host.ip, local_host.port);
         client.emplace(server.value().sockfd());
         manager = std::make_unique<UniformFIFOBroadcast>(logger.value(), id);
