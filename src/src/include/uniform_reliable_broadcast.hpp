@@ -77,36 +77,40 @@ public:
                                                                                                             2)))));
     }
 
-protected:
-    void SendInternal(const Broadcast::Message &msg) noexcept override
+    void Send(const std::string &msg) noexcept
     {
+        Broadcast::Message::Id::Seq seq = n_messages_sent_.fetch_add(1);
+        Broadcast::Message message = {{seq, id_}, id_, {msg.begin(), msg.end()}};
+        
+        LogSend(seq);
+
         if (n_own_pending_for_delivery_.load() >= n_own_pending_delivery_ideal_.load())
         {
             own_pending_for_broadcast_.mutex.lock_shared();
-            own_pending_for_broadcast_.data.push(msg);
+            own_pending_for_broadcast_.data.push(message);
             own_pending_for_broadcast_.mutex.unlock_shared();
             return;
         }
 
+        n_own_pending_for_delivery_.fetch_add(1);
+        SendInternal(message);
+    }
+
+protected:
+    void SendInternal(const Broadcast::Message &msg) noexcept override
+    {
         pending_for_delivery_.mutex.lock();
         pending_for_delivery_.data.insert(msg.id);
         pending_for_delivery_.mutex.unlock();
-
 #ifdef DEBUG
         std::cout << "[DBUG] URB: Actually broadcasting message " << msg.id.seq << " now\n";
 #endif
-        n_own_pending_for_delivery_.fetch_add(1);
-
         BestEffortBroadcast::SendInternal(msg);
     }
 
     void NotifyInternal(const Broadcast::Message &msg) noexcept override
     {
         BestEffortBroadcast::NotifyInternal(msg);
-
-        acks_.mutex.lock();
-        acks_.data[msg.id].insert(msg.sender);
-        acks_.mutex.unlock();
 
         pending_for_delivery_.mutex.lock_shared();
         bool not_pending = pending_for_delivery_.data.count(msg.id) == 0;
@@ -116,15 +120,22 @@ protected:
         bool not_delivered = delivered_.data.count(msg.id) == 0;
         delivered_.mutex.unlock_shared();
 
-        if (not_pending && not_delivered)
+        if (not_delivered)
         {
-            pending_for_delivery_.mutex.lock();
-            pending_for_delivery_.data.insert(msg.id);
-            pending_for_delivery_.mutex.unlock();
-#ifdef DEBUG
-            std::cout << "[DBUG] URB Relaying: " << msg.id.author << " " << msg.id.seq << "\n";
-#endif
-            BestEffortBroadcast::SendInternal(msg);
+            acks_.mutex.lock();
+            acks_.data[msg.id].insert(msg.sender);
+            acks_.mutex.unlock();
+
+            if (not_pending) 
+            {
+                pending_for_delivery_.mutex.lock();
+                pending_for_delivery_.data.insert(msg.id);
+                pending_for_delivery_.mutex.unlock();
+    #ifdef DEBUG
+                std::cout << "[DBUG] URB Relaying: " << msg.id.author << " " << msg.id.seq << "\n";
+    #endif
+                BestEffortBroadcast::SendInternal(msg);
+            }
         }
     }
 
@@ -141,24 +152,6 @@ private:
     {
         while (on_.load())
         {
-#ifdef DEBUG
-            own_pending_for_broadcast_.mutex.lock_shared();
-            std::cerr << "[DBUG] URB: own_pending_for_broadcast_: " << own_pending_for_broadcast_.data.size();
-            own_pending_for_broadcast_.mutex.unlock_shared();
-
-            delivered_.mutex.lock_shared();
-            std::cerr << " delivered_: " << delivered_.data.size();
-            delivered_.mutex.unlock_shared();
-
-            pending_for_delivery_.mutex.lock_shared();
-            std::cerr << " pending_for_delivery_: " << pending_for_delivery_.data.size();
-            pending_for_delivery_.mutex.unlock_shared();
-
-            acks_.mutex.lock_shared();
-            std::cerr << " acks_: " << acks_.data.size() << "\n";
-            acks_.mutex.unlock_shared();
-#endif
-
             pending_for_delivery_.mutex.lock();
             std::vector<Broadcast::Message::Id> pending_messages(pending_for_delivery_.data.begin(), pending_for_delivery_.data.end());
 #ifdef DEBUG
@@ -166,7 +159,7 @@ private:
 #endif
             pending_for_delivery_.mutex.unlock();
 
-            for (const auto id : pending_messages)
+            for (const auto &id : pending_messages)
             {
                 acks_.mutex.lock();
                 bool majority_seen = (acks_.data[id].size() + 1) > static_cast<std::size_t>(std::floor(n_processes_.load() / 2));
@@ -182,7 +175,7 @@ private:
                     pending_for_delivery_.data.erase(id);
                     pending_for_delivery_.mutex.unlock();
 
-                    if (id.author == id_ && (n_own_pending_for_delivery_.fetch_add(static_cast<unsigned int>(-1)) - 1) < n_own_pending_delivery_ideal_.load())
+                    if (id.author == id_ && n_own_pending_for_delivery_.fetch_add(static_cast<unsigned int>(-1)) <= n_own_pending_delivery_ideal_.load())
                     {
                         own_pending_for_broadcast_.mutex.lock();
                         bool pending_for_broadcast_not_empty = !own_pending_for_broadcast_.data.empty();
@@ -195,16 +188,8 @@ private:
 
                         if (pending_for_broadcast_not_empty)
                         {
-                            pending_for_delivery_.mutex.lock();
-                            pending_for_delivery_.data.insert(msg.id);
-                            pending_for_delivery_.mutex.unlock();
-
-#ifdef DEBUG
-                            std::cout << "[DBUG] URB: Actually broadcasting message " << msg.id.seq << " now\n";
-#endif
                             n_own_pending_for_delivery_.fetch_add(1);
-
-                            BestEffortBroadcast::SendInternal(msg);
+                            SendInternal(msg);
                         }
                     }
 

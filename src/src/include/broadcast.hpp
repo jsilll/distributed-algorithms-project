@@ -61,10 +61,9 @@ protected:
 
   virtual void DeliverInternal(const Broadcast::Message::Id &id, bool log) = 0;
 
-private:
+protected:
   void LogSend(Broadcast::Message::Id::Seq seq) noexcept;
 
-protected:
   void LogDeliver(const Broadcast::Message::Id &id) noexcept;
 
 public:
