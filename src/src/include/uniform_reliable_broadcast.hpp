@@ -103,7 +103,7 @@ private:
     };
 
 protected:
-    static constexpr int kFinishDeliveringAllMs = 250;
+    static constexpr int kFinishDeliveringAllMs = 100;
 
 private:
     std::thread deliver_thread_;

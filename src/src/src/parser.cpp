@@ -78,21 +78,19 @@ in_addr_t Parser::Host::IpLookup(const char *host)
 
     if (getaddrinfo(host, nullptr, &hints, &res) != 0)
     {
-        throw std::runtime_error(
-            "Could not resolve host `" + std::string(host) +
-            "` to IP: " + std::string(std::strerror(errno)));
+        freeaddrinfo(res);
+        throw std::runtime_error("Could not resolve host `" + std::string(host) + "` to IP: " + std::string(std::strerror(errno)));
     }
 
     while (res)
     {
         inet_ntop(res->ai_family, res->ai_addr->sa_data, addrstr, 128);
-
         switch (res->ai_family)
         {
         case AF_INET:
-            ptr =
-                &(reinterpret_cast<struct sockaddr_in *>(res->ai_addr))->sin_addr;
+            ptr = &(reinterpret_cast<struct sockaddr_in *>(res->ai_addr))->sin_addr;
             inet_ntop(res->ai_family, ptr, addrstr, 128);
+            freeaddrinfo(res);
             return inet_addr(addrstr);
             break;
         // case AF_INET6:
@@ -104,6 +102,7 @@ in_addr_t Parser::Host::IpLookup(const char *host)
         res = res->ai_next;
     }
 
+    freeaddrinfo(res);
     throw std::runtime_error("No host resolves to IPv4");
 }
 

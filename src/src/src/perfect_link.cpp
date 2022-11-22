@@ -72,7 +72,6 @@ void PerfectLink::Manager::SendMessages()
   while (on_.load())
   {
     std::vector<PerfectLink *> pls;
-
     perfect_links_.mutex.lock_shared();
     pls.reserve(perfect_links_.data.size());
     for (const auto &[_, pl] : perfect_links_.data)
@@ -81,7 +80,7 @@ void PerfectLink::Manager::SendMessages()
     }
     perfect_links_.mutex.unlock_shared();
 
-    for (const auto &pl : pls)
+    for (const auto pl : pls)
     {
       pl->SendMessages();
     }

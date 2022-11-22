@@ -65,8 +65,8 @@ public:
     friend class PerfectLink;
 
   protected:
-    static constexpr int kFinishSendingAllAcksMs = 250;
-    static constexpr int kFinishSendingAllMsgsMs = 250;
+    static constexpr int kFinishSendingAllAcksMs = 100;
+    static constexpr int kFinishSendingAllMsgsMs = 100;
 
     std::atomic<Id> n_processes_{1};
 
@@ -131,7 +131,7 @@ private:
 
   Shared<std::unordered_set<Ack>> acks_to_send_;
   Shared<std::unordered_set<Message, Message::Hash>> messages_to_send_;
-  Shared<std::unordered_map<Message::Seq, time_t>> messages_delivered_;
+  Shared<std::unordered_map<Message::Seq, std::time_t>> messages_delivered_;
 
   std::vector<Manager *> managers_;
 
