@@ -1,5 +1,7 @@
 #include "uniform_reliable_broadcast.hpp"
 
+#include <cmath>
+
 void UniformReliableBroadcast::DeliveredSet::PeerState::Insert(Broadcast::Message::Id::Seq seq) noexcept
 {
     if (seq == bottom_)

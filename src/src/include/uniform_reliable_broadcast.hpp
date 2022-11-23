@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cmath>
 #include <queue>
 
 #include "best_effort_broadcast.hpp"
