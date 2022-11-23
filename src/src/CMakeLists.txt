@@ -11,6 +11,9 @@ src/perfect_link.cpp
 src/udp_client.cpp
 src/udp_server.cpp
 src/broadcast.cpp
+src/best_effort_broadcast.cpp
+src/fifo_broadcast.cpp
+src/uniform_reliable_broadcast.cpp
 )
 
 # DO NOT EDIT THE FOLLOWING LINE

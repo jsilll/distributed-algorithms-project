@@ -209,6 +209,7 @@ void PerfectLink::CleanAcks() noexcept
     }
   }
 
+#ifndef PERFECT_LINKS_STRONG
   for (const auto &ack_to_remove : acks_to_remove)
   {
     if (ack_to_remove.remove_from_delivered)
@@ -216,6 +217,7 @@ void PerfectLink::CleanAcks() noexcept
       messages_delivered_.data.erase(ack_to_remove.seq);
     }
   }
+#endif
 
   messages_delivered_.mutex.unlock_shared();
 

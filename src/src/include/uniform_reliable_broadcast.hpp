@@ -23,83 +23,49 @@
  */
 class UniformReliableBroadcast : public BestEffortBroadcast
 {
-private:
-    template <typename Id, typename Seq>
     class DeliveredSet
     {
     private:
-        struct PeerState
+        class PeerState
         {
-            Seq bottom{1};
-            std::set<Seq> delivered; // std::set needed for in order iteration
+        private:
+            Broadcast::Message::Id::Seq bottom_{1};
+            std::set<Broadcast::Message::Id::Seq> delivered_;
 
-            bool Contains(Seq seq) const noexcept
+        public:
+            inline std::size_t Size() const noexcept
             {
-                return seq < bottom || delivered.count(seq);
+                return delivered_.size();
             }
 
-            void Insert(Seq seq) noexcept
+            inline bool Contains(Broadcast::Message::Id::Seq seq) const noexcept
             {
-                if (seq == bottom)
-                {
-                    bottom++;
-
-                    std::vector<Seq> to_remove;
-                    to_remove.reserve(delivered.size());
-
-                    for (const auto seq : delivered)
-                    {
-                        if (seq == bottom)
-                        {
-                            to_remove.emplace_back(seq);
-                            bottom++;
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-
-                    for (const auto seq : to_remove)
-                    {
-                        delivered.erase(seq);
-                    }
-                }
-                else
-                {
-                    delivered.insert(seq);
-                }
+                return seq < bottom_ || delivered_.count(seq);
             }
+
+            void Insert(Broadcast::Message::Id::Seq seq) noexcept;
         };
 
     private:
-        std::unordered_map<Id, PeerState> state_;
+        std::unordered_map<PerfectLink::Id, PeerState> state_;
 
     public:
-        bool Contains(const Id id, const Seq seq) const noexcept
+        inline bool Contains(const Broadcast::Message::Id &id) const noexcept
         {
-            if (state_.count(id))
+            if (state_.count(id.author))
             {
-                return state_.at(id).Contains(seq);
+                return state_.at(id.author).Contains(id.seq);
             }
 
             return false;
         }
 
-        void Insert(const Id id, const Seq seq) noexcept
+        inline void Insert(const Broadcast::Message::Id &id) noexcept
         {
-            state_[id].Insert(seq);
+            state_[id.author].Insert(id.seq);
         }
 
-        std::size_t Size() const noexcept
-        {
-            std::size_t res = 0;
-            for (const auto &[_, peer_state] : state_)
-            {
-                res += peer_state.delivered.size();
-            }
-            return res;
-        }
+        std::size_t Size() const noexcept;
     };
 
 protected:
@@ -111,9 +77,10 @@ private:
 protected:
     std::atomic_uint n_own_pending_for_delivery_{0};
     std::atomic_uint n_own_pending_delivery_ideal_{1};
+
+    Shared<DeliveredSet> delivered_;
     Shared<std::queue<Broadcast::Message>> own_pending_for_broadcast_;
     Shared<std::unordered_set<Broadcast::Message::Id>> pending_for_delivery_;
-    Shared<DeliveredSet<PerfectLink::Id, Broadcast::Message::Id::Seq>> delivered_;
     Shared<std::unordered_map<Message::Id, std::unordered_set<PerfectLink::Id>>> acks_;
 
 public:
@@ -122,7 +89,7 @@ public:
 
     ~UniformReliableBroadcast() noexcept override = default;
 
-    void Stop() noexcept override
+    inline void Stop() noexcept override
     {
         if (on_.load())
         {
@@ -131,7 +98,7 @@ public:
         }
     }
 
-    void Start() noexcept override
+    inline void Start() noexcept override
     {
         Broadcast::Start();
 #ifdef DEBUG
@@ -140,42 +107,12 @@ public:
         deliver_thread_ = std::thread(&UniformReliableBroadcast::DeliverPending, this);
     }
 
-    void Add(std::unique_ptr<PerfectLink> pl) noexcept
-    {
-        const PerfectLink::Id id = pl->target_id();
+    void Add(std::unique_ptr<PerfectLink> pl) noexcept;
 
-        perfect_links_.mutex.lock();
-        perfect_links_.data[id] = std::move(pl);
-        perfect_links_.data[id]->Subscribe(this);
-        perfect_links_.mutex.unlock();
-
-        n_processes_.fetch_add(1);
-        n_own_pending_delivery_ideal_.store(static_cast<unsigned int>(std::max(1, static_cast<int>(URB_MAX_MSGS_IN_NETWORK /
-                                                                                                   std::pow(n_processes_.load(),
-                                                                                                            2)))));
-    }
-
-    void Send(const std::string &msg) noexcept
-    {
-        Broadcast::Message::Id::Seq seq = n_messages_sent_.fetch_add(1);
-        Broadcast::Message message = {{seq, id_}, id_, {msg.begin(), msg.end()}};
-
-        LogSend(seq);
-
-        if (n_own_pending_for_delivery_.load() >= n_own_pending_delivery_ideal_.load())
-        {
-            own_pending_for_broadcast_.mutex.lock_shared();
-            own_pending_for_broadcast_.data.push(message);
-            own_pending_for_broadcast_.mutex.unlock_shared();
-            return;
-        }
-
-        n_own_pending_for_delivery_.fetch_add(1);
-        SendInternal(message);
-    }
+    void Send(const std::string &msg) noexcept;
 
 protected:
-    void SendInternal(const Broadcast::Message &msg) noexcept override
+    inline void SendInternal(const Broadcast::Message &msg) noexcept override
     {
         pending_for_delivery_.mutex.lock();
         pending_for_delivery_.data.insert(msg.id);
@@ -186,38 +123,9 @@ protected:
         BestEffortBroadcast::SendInternal(msg);
     }
 
-    void NotifyInternal(const Broadcast::Message &msg) noexcept override
-    {
-        BestEffortBroadcast::NotifyInternal(msg);
+    void NotifyInternal(const Broadcast::Message &msg) noexcept override;
 
-        pending_for_delivery_.mutex.lock_shared();
-        bool not_pending = pending_for_delivery_.data.count(msg.id) == 0;
-        pending_for_delivery_.mutex.unlock_shared();
-
-        delivered_.mutex.lock_shared();
-        bool not_delivered = !delivered_.data.Contains(msg.id.author, msg.id.seq);
-        delivered_.mutex.unlock_shared();
-
-        if (not_delivered)
-        {
-            acks_.mutex.lock();
-            acks_.data[msg.id].insert(msg.sender);
-            acks_.mutex.unlock();
-
-            if (not_pending)
-            {
-                pending_for_delivery_.mutex.lock();
-                pending_for_delivery_.data.insert(msg.id);
-                pending_for_delivery_.mutex.unlock();
-#ifdef DEBUG
-                std::cout << "[DBUG] URB Relaying: " << msg.id.author << " " << msg.id.seq << "\n";
-#endif
-                BestEffortBroadcast::SendInternal(msg);
-            }
-        }
-    }
-
-    void DeliverInternal(const Broadcast::Message::Id &id, bool log = false) noexcept override
+    inline void DeliverInternal(const Broadcast::Message::Id &id, bool log = false) noexcept override
     {
         if (log)
         {
@@ -226,66 +134,5 @@ protected:
     }
 
 private:
-    void DeliverPending() noexcept
-    {
-        while (on_.load())
-        {
-            pending_for_delivery_.mutex.lock();
-            std::vector<Broadcast::Message::Id> pending_messages(pending_for_delivery_.data.begin(), pending_for_delivery_.data.end());
-#ifdef DEBUG
-            std::cout << "[DBUG] URB Pending: " << pending_for_delivery_.data.size() << "\n";
-#endif
-            pending_for_delivery_.mutex.unlock();
-
-            for (const auto &id : pending_messages)
-            {
-                acks_.mutex.lock();
-                bool majority_seen = (acks_.data[id].size() + 1) > static_cast<std::size_t>(std::floor(n_processes_.load() / 2));
-                acks_.mutex.unlock();
-
-                delivered_.mutex.lock_shared();
-                bool not_delivered = !delivered_.data.Contains(id.author, id.seq);
-                delivered_.mutex.unlock_shared();
-
-                if (majority_seen && not_delivered)
-                {
-                    pending_for_delivery_.mutex.lock();
-                    pending_for_delivery_.data.erase(id);
-                    pending_for_delivery_.mutex.unlock();
-
-                    if (id.author == id_ && n_own_pending_for_delivery_.fetch_add(static_cast<unsigned int>(-1)) <= n_own_pending_delivery_ideal_.load())
-                    {
-                        own_pending_for_broadcast_.mutex.lock();
-                        bool pending_for_broadcast_not_empty = !own_pending_for_broadcast_.data.empty();
-                        auto &msg = own_pending_for_broadcast_.data.front();
-                        if (pending_for_broadcast_not_empty)
-                        {
-                            own_pending_for_broadcast_.data.pop();
-                        }
-                        own_pending_for_broadcast_.mutex.unlock();
-
-                        if (pending_for_broadcast_not_empty)
-                        {
-                            n_own_pending_for_delivery_.fetch_add(1);
-                            SendInternal(msg);
-                        }
-                    }
-
-                    delivered_.mutex.lock();
-                    delivered_.data.Insert(id.author, id.seq);
-                    delivered_.mutex.unlock();
-
-                    acks_.mutex.lock();
-                    acks_.data.erase(id);
-                    acks_.mutex.unlock();
-#ifdef DEBUG
-                    std::cout << "[DBUG] URB Delivering: " << id.author << " " << id.seq << "\n";
-#endif
-                    DeliverInternal(id, true);
-                }
-            }
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(kFinishDeliveringAllMs));
-        }
-    }
+    void DeliverPending() noexcept;
 };

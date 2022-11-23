@@ -23,12 +23,12 @@ public:
     ~ReliableFIFOBroadcast() noexcept override = default;
 
 protected:
-    void SendInternal(const Broadcast::Message &msg) noexcept final
+    inline void SendInternal(const Broadcast::Message &msg) noexcept final
     {
         BestEffortBroadcast::SendInternal(msg);
     }
 
-    void NotifyInternal(const Broadcast::Message &msg) noexcept final
+    inline void NotifyInternal(const Broadcast::Message &msg) noexcept final
     {
         BestEffortBroadcast::NotifyInternal(msg);
     }
@@ -41,43 +41,7 @@ protected:
      * @param id
      * @param log
      */
-    void DeliverInternal(const Broadcast::Message::Id &id, bool log = false) noexcept final
-    {
-        auto &state = peer_state_[id.author];
-
-        std::vector<Message::Id::Seq> to_remove;
-        to_remove.reserve(state.pending.size());
-
-        state.pending.insert(id.seq);
-        for (const auto seq : state.pending)
-        {
-            if (seq > state.next)
-            {
-                break;
-            }
-            else
-            {
-                if (seq > state.next)
-                {
-                    break;
-                }
-
-                to_remove.emplace_back(seq);
-
-                if (log)
-                {
-                    LogDeliver({seq, id.author});
-                }
-
-                state.next++;
-            }
-        }
-
-        for (const auto seq : to_remove)
-        {
-            state.pending.erase(seq);
-        }
-    }
+    void DeliverInternal(const Broadcast::Message::Id &id, bool log = false) noexcept final;
 };
 
 class UniformFIFOBroadcast final : public UniformReliableBroadcast
@@ -99,12 +63,12 @@ public:
     ~UniformFIFOBroadcast() noexcept override = default;
 
 protected:
-    void SendInternal(const Broadcast::Message &msg) noexcept final
+    inline void SendInternal(const Broadcast::Message &msg) noexcept final
     {
         UniformReliableBroadcast::SendInternal(msg);
     }
 
-    void NotifyInternal(const Broadcast::Message &msg) noexcept final
+    inline void NotifyInternal(const Broadcast::Message &msg) noexcept final
     {
         UniformReliableBroadcast::NotifyInternal(msg);
     }
@@ -117,34 +81,5 @@ protected:
      * @param id
      * @param log
      */
-    void DeliverInternal(const Broadcast::Message::Id &id, bool log = false) noexcept final
-    {
-        auto &state = peer_state_[id.author];
-
-        std::vector<Message::Id::Seq> to_remove;
-        to_remove.reserve(state.pending.size());
-
-        state.pending.insert(id.seq);
-        for (const auto seq : state.pending)
-        {
-            if (seq > state.next)
-            {
-                break;
-            }
-
-            to_remove.emplace_back(seq);
-
-            if (log)
-            {
-                LogDeliver({seq, id.author});
-            }
-
-            state.next++;
-        }
-
-        for (const auto seq : to_remove)
-        {
-            state.pending.erase(seq);
-        }
-    }
+    void DeliverInternal(const Broadcast::Message::Id &id, bool log = false) noexcept;
 };
