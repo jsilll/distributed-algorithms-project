@@ -30,7 +30,6 @@ public:
   {
     kPerfectLinks,
     kFIFOBroadcast,
-    kLatticeAgreement,
   };
 
 private:
@@ -49,7 +48,7 @@ private:
   unsigned receiver_id_{};
   unsigned n_messages_to_send_{};
 
-  ExecMode exec_mode_{kLatticeAgreement};
+  ExecMode exec_mode_{kFIFOBroadcast};
 
 public:
   Parser(int argc, char const *const *argv, bool requires_config = true);
