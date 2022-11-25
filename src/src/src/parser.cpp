@@ -313,6 +313,10 @@ void Parser::ParseMode()
         {
             exec_mode_ = kFIFOBroadcast;
         }
+        else if (std::strcmp(argv_[9], "latt") == 0)
+        {
+            exec_mode_ = kLatticeAgreement;
+        }
         else
         {
             throw std::runtime_error("Invalid execution mode provided.");
@@ -482,7 +486,11 @@ void Parser::ParseConfigFile()
             os << "Parsing for `" << config_path() << "` failed at line 1";
             throw std::invalid_argument(os.str());
         }
+
         break;
+    case kLatticeAgreement:
+        if (!)
+        break; // TODO: read config file
 
     default:
         throw std::runtime_error("Invalid execution mode.");
