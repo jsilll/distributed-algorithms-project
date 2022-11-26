@@ -8,29 +8,20 @@
 #include "udp_client.hpp"
 #include "info_display.hpp"
 
-/**
- * @brief Responsible for handling the
- * proper termination of the process
- *
- * @param signum
- */
-static void stop_execution(int signum)
+static void StopExecution(int signum)
 {
   signal(SIGINT, SIG_DFL);
   signal(SIGTERM, SIG_DFL);
-
   std::cout << "\n[INFO] " << strsignal(signum) << " signal received.\n";
   std::cout << "[INFO] Immediately stopping network packet processing.\n";
-
   drivers::StopExecution();
-
   std::_Exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char *argv[])
 {
-  signal(SIGINT, stop_execution);
-  signal(SIGTERM, stop_execution);
+  signal(SIGINT, StopExecution);
+  signal(SIGTERM, StopExecution);
 
   Parser parser(argc, argv, true);
 
@@ -55,6 +46,9 @@ int main(int argc, char *argv[])
     break;
   case Parser::ExecMode::kFIFOBroadcast:
     drivers::FIFOBroadcast(parser);
+    break;
+  case Parser::ExecMode::kLatticeAgreement:
+    drivers::LatticeAgreement(parser);
     break;
   default:
     std::cerr << "Invalid execution mode." << std::endl;

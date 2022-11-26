@@ -1,9 +1,10 @@
 #include "best_effort_broadcast.hpp"
 
+#include <cassert>
+
 void BestEffortBroadcast::SendInternal(const Broadcast::Message &msg) noexcept
 {
     std::vector<PerfectLink *> pls;
-
     perfect_links_.mutex.lock_shared();
     pls.reserve(perfect_links_.data.size());
     for (const auto &[_, pl] : perfect_links_.data)
@@ -15,8 +16,10 @@ void BestEffortBroadcast::SendInternal(const Broadcast::Message &msg) noexcept
     static_assert(UDPServer::kMaxSendSize > PerfectLink::kPacketPrefixSize);
     static_assert((UDPServer::kMaxSendSize - PerfectLink::kPacketPrefixSize) > kPacketPrefixSize);
 
-    char buffer[UDPServer::kMaxSendSize - PerfectLink::kPacketPrefixSize];
+    std::vector<char> buffer(kPacketPrefixSize + msg.payload.size());
     std::size_t len = Serialize(msg, buffer);
+
+    assert(len == buffer.size());
 
 #ifdef DEBUG
     if (msg.id.author == id_)
@@ -27,7 +30,7 @@ void BestEffortBroadcast::SendInternal(const Broadcast::Message &msg) noexcept
 
     for (const auto pl : pls)
     {
-        pl->Send(buffer, len);
+        pl->Send(std::move(buffer));
     }
 }
 

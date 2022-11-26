@@ -64,7 +64,7 @@ protected:
   void LogDeliver(const Broadcast::Message::Id &id) noexcept;
 
 public:
-  static std::size_t Serialize(const Broadcast::Message &msg, char *buffer) noexcept;
+  static std::size_t Serialize(const Broadcast::Message &msg, std::vector<char> &buffer) noexcept;
   static std::optional<Message> Parse(PerfectLink::Id sender_id, const std::vector<char> &bytes) noexcept;
 };
 

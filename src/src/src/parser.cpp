@@ -5,6 +5,7 @@
 #include <string>
 #include <cstring>
 #include <sstream>
+#include <iterator>
 #include <iostream>
 #include <algorithm>
 #include <arpa/inet.h>
@@ -30,6 +31,14 @@ inline void Trim(std::string &s)
 {
     LeftTrim(s);
     RightTrim(s);
+}
+
+inline std::vector<std::string> Tokenize(const std::string &text)
+{
+    std::vector<std::string> tokens{};
+    std::istringstream iss(text);
+    copy(std::istream_iterator<std::string>(iss), std::istream_iterator<std::string>(), std::back_inserter(tokens));
+    return tokens;
 }
 
 inline bool IsPositiveNumber(const std::string &s)
@@ -192,11 +201,13 @@ unsigned int Parser::target_id() const
 
 Parser::ExecMode Parser::exec_mode() const noexcept
 {
+    CheckParsed();
     return exec_mode_;
 }
 
 Parser::Host Parser::local_host() const
 {
+    CheckParsed();
     if ((id_ - 1) >= hosts_.size())
     {
         throw std::invalid_argument("Id is outside list of hosts.");
@@ -207,12 +218,57 @@ Parser::Host Parser::local_host() const
 
 Parser::Host Parser::target_host() const
 {
+    CheckParsed();
     if ((receiver_id_ - 1) >= hosts_.size())
     {
         throw std::invalid_argument("Receiver id is outside list of hosts.");
     }
 
     return hosts_[receiver_id_ - 1];
+}
+
+[[nodiscard]] unsigned Parser::lattice_p() const
+{
+    CheckParsed();
+    if (exec_mode_ != kLatticeAgreement)
+    {
+        throw std::runtime_error("lattice_p() may only be called when exec_mode_ is kLatticeAgreement.");
+    }
+
+    return lattice_p_;
+}
+
+[[nodiscard]] unsigned Parser::lattice_vs() const
+{
+    CheckParsed();
+    if (exec_mode_ != kLatticeAgreement)
+    {
+        throw std::runtime_error("lattice_vs() may only be called when exec_mode_ is kLatticeAgreement.");
+    }
+
+    return lattice_vs_;
+}
+
+[[nodiscard]] unsigned Parser::lattice_ds() const
+{
+    CheckParsed();
+    if (exec_mode_ != kLatticeAgreement)
+    {
+        throw std::runtime_error("lattice_ds() may only be called when exec_mode_ is kLatticeAgreement.");
+    }
+
+    return lattice_ds_;
+}
+
+[[nodiscard]] std::vector<std::vector<unsigned>> Parser::lattice_proposals() const
+{
+    CheckParsed();
+    if (exec_mode_ != kLatticeAgreement)
+    {
+        throw std::runtime_error("lattice_proposals() may only be called when exec_mode_ is kLatticeAgreement.");
+    }
+
+    return lattice_proposals_;
 }
 
 void Parser::CheckParsed() const
@@ -408,7 +464,7 @@ void Parser::ParseHostsFile()
         }
 
 #ifdef DEBUG
-        std::cout << "[DEBUG] Reading Host: " << id << " " << ip << " " << port << std::endl;
+        std::cout << "[DBUG] Reading Host: " << id << " " << ip << " " << port << std::endl;
 #endif
         hosts_.emplace_back(ip, port, id);
     }
@@ -438,11 +494,11 @@ void Parser::ParseHostsFile()
               { return a.id < b.id; });
 
 #ifdef DEBUG
-    std::cout << "[DEBUG] Hosts Vector" << std::endl;
-    std::cout << "[DEBUG] ============" << std::endl;
+    std::cout << "[DBUG] Hosts Vector" << std::endl;
+    std::cout << "[DBUG] ============" << std::endl;
     for (const auto &host : hosts_)
     {
-        std::cout << "[DEBUG] " << host.id << " " << host.ip_readable() << " " << host.port_readable() << std::endl;
+        std::cout << "[DBUG] " << host.id << " " << host.ip_readable() << " " << host.port_readable() << std::endl;
     }
 #endif
 }
@@ -489,8 +545,35 @@ void Parser::ParseConfigFile()
 
         break;
     case kLatticeAgreement:
-        if (!)
-        break; // TODO: read config file
+        if (!(iss >> lattice_p_ >> lattice_vs_ >> lattice_ds_))
+        {
+            std::ostringstream os;
+            os << "Parsing for `" << config_path() << "` failed at line 1";
+            throw std::invalid_argument(os.str());
+        }
+
+        lattice_proposals_.reserve(lattice_p_);
+        for (unsigned i = 0; i < lattice_p_; ++i)
+        {
+            std::string line;
+            std::getline(config_file, line);
+
+            auto tokens = Tokenize(line);
+            if (tokens.size() > lattice_vs_)
+            {
+                throw std::runtime_error("Proposal line contains more than 'vs' integers.");
+            }
+
+            std::vector<unsigned> proposal;
+            std::transform(tokens.begin(), tokens.end(), std::back_inserter(proposal),
+                           [&](const std::string &s)
+                           {
+                               return static_cast<unsigned>(stoi(s));
+                           });
+            lattice_proposals_.push_back(std::move(proposal));
+        }
+
+        break;
 
     default:
         throw std::runtime_error("Invalid execution mode.");

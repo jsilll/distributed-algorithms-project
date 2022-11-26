@@ -129,17 +129,18 @@ PerfectLink::Message::Seq PerfectLink::Send(const std::string &msg) noexcept
   return id;
 }
 
-PerfectLink::Message::Seq PerfectLink::Send(const char *payload, std::size_t len) noexcept
+PerfectLink::Message::Seq PerfectLink::Send(const std::vector<char> payload) noexcept
 {
   Message::Seq id = n_messages_sent_.fetch_add(1);
 
+#ifdef DEBUG
+  std::cout << "[DBUG] PerfectLink sending Raw Message of size (no metadata): " << payload.size() << "\n";
+#endif
+
   messages_to_send_.mutex.lock();
-  messages_to_send_.data.insert({id, {payload, payload + len}});
+  messages_to_send_.data.insert({id, std::move(payload)});
   messages_to_send_.mutex.unlock();
 
-#ifdef DEBUG
-  std::cout << "[DBUG] PerfectLink sending Raw Message of size (no metadata): " << len << "\n";
-#endif
 
   return id;
 }
@@ -161,18 +162,18 @@ void PerfectLink::SendAcks()
   for (auto ack_id : acks_to_send_.data)
   {
     static_assert(kPacketPrefixSize <= UDPServer::kMaxSendSize);
-    char buffer[kPacketPrefixSize];
+    std::vector<char> buffer(kPacketPrefixSize);
 
     PacketType pt{kACK};
     auto pt_ptr = static_cast<char *>(static_cast<void *>(&pt));
-    std::copy(pt_ptr, pt_ptr + sizeof(PacketType), buffer);
+    std::copy(pt_ptr, pt_ptr + sizeof(PacketType), buffer.begin());
 
     auto id_ptr = static_cast<const char *>(static_cast<const void *>(&ack_id));
-    std::copy(id_ptr, id_ptr + sizeof(Message::Seq), buffer + sizeof(PacketType));
+    std::copy(id_ptr, id_ptr + sizeof(Message::Seq), buffer.begin() + sizeof(PacketType));
 
     try
     {
-      [[maybe_unused]] ssize_t bytes = client_.Send(buffer, kPacketPrefixSize, target_addr_);
+      [[maybe_unused]] ssize_t bytes = client_.Send(buffer, target_addr_);
 #ifdef DEBUG
       std::cout << "[DBUG] Sending Ack " << ack_id << " To Process " << target_id_ << "\n";
 #endif
@@ -209,7 +210,7 @@ void PerfectLink::CleanAcks() noexcept
     }
   }
 
-#ifndef PERFECT_LINKS_STRONG
+#ifdef PERFECT_LINKS_WEAK
   for (const auto &ack_to_remove : acks_to_remove)
   {
     if (ack_to_remove.remove_from_delivered)
@@ -241,12 +242,12 @@ void PerfectLink::SendMessages()
 
   for (auto &msg : messages_to_send_.data)
   {
-    char buffer[UDPServer::kMaxSendSize];
+    std::vector<char> buffer(kPacketPrefixSize + msg.payload.size());
     std::size_t len = Serialize(msg, buffer);
 
     try
     {
-      [[maybe_unused]] ssize_t bytes = client_.Send(buffer, kPacketPrefixSize + msg.payload.size(), target_addr_);
+      [[maybe_unused]] ssize_t bytes = client_.Send(buffer, target_addr_);
 #ifdef DEBUG
       std::cout << "[DBUG] Sending Message " << msg.seq << " To Process " << target_id_ << "\n";
 #endif
@@ -323,16 +324,16 @@ void PerfectLink::Notify(const std::vector<char> &bytes) noexcept
   }
 }
 
-std::size_t PerfectLink::Serialize(const Message &msg, char *buffer) noexcept
+std::size_t PerfectLink::Serialize(const Message &msg, std::vector<char> &buffer) noexcept
 {
   PacketType pt{kMSG};
   auto pt_ptr = static_cast<char *>(static_cast<void *>(&pt));
-  std::copy(pt_ptr, pt_ptr + sizeof(PacketType), buffer);
+  std::copy(pt_ptr, pt_ptr + sizeof(PacketType), buffer.begin());
 
   auto id_ptr = static_cast<const char *>(static_cast<const void *>(&msg.seq));
-  std::copy(id_ptr, id_ptr + sizeof(Message::Seq), buffer + sizeof(PacketType));
+  std::copy(id_ptr, id_ptr + sizeof(Message::Seq), buffer.begin() + sizeof(PacketType));
 
-  std::copy(msg.payload.begin(), msg.payload.end(), buffer + kPacketPrefixSize);
+  std::copy(msg.payload.begin(), msg.payload.end(), buffer.begin() + kPacketPrefixSize);
 
   return kPacketPrefixSize + msg.payload.size();
 }

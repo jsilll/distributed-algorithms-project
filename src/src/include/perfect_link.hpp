@@ -153,7 +153,7 @@ public:
   }
 
   Message::Seq Send(const std::string &msg) noexcept;
-  Message::Seq Send(const char *payload, std::size_t len) noexcept;
+  Message::Seq Send(const std::vector<char> payload) noexcept;
 
   void Subscribe(Manager *manager) noexcept;
 
@@ -164,6 +164,6 @@ private:
 
   void Notify(const std::vector<char> &bytes) noexcept final;
 
-  static std::size_t Serialize(const Message &msg, char *buffer) noexcept;
+  static std::size_t Serialize(const Message &msg, std::vector<char> &buffer) noexcept;
   static std::optional<std::variant<Message, Ack>> Parse(const std::vector<char> &bytes) noexcept;
 };

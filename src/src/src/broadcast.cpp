@@ -40,22 +40,21 @@ void Broadcast::LogDeliver(const Message::Id &id) noexcept
     logger_ << ss.str();
 }
 
-std::size_t Broadcast::Serialize(const Broadcast::Message &msg, char *buffer) noexcept
+std::size_t Broadcast::Serialize(const Broadcast::Message &msg, std::vector<char> &buffer) noexcept
 {
-
     auto aid_ptr = static_cast<const char *>(static_cast<const void *>(&msg.id.author));
     auto seq_ptr = static_cast<const char *>(static_cast<const void *>(&msg.id.seq));
-    std::copy(aid_ptr, aid_ptr + sizeof(PerfectLink::Id), buffer);
-    std::copy(seq_ptr, seq_ptr + sizeof(Broadcast::Message::Id::Seq), buffer + sizeof(PerfectLink::Id));
-    std::copy(msg.payload.begin(), msg.payload.end(), buffer + kPacketPrefixSize);
+    std::copy(aid_ptr, aid_ptr + sizeof(PerfectLink::Id), buffer.begin());
+    std::copy(seq_ptr, seq_ptr + sizeof(Broadcast::Message::Id::Seq), buffer.begin() + sizeof(PerfectLink::Id));
+    std::copy(msg.payload.begin(), msg.payload.end(), buffer.begin() + kPacketPrefixSize);
     return kPacketPrefixSize + msg.payload.size();
 }
 
-  std::optional<Broadcast::Message> Broadcast::Parse(PerfectLink::Id sender_id, const std::vector<char> &bytes) noexcept
-  {
+std::optional<Broadcast::Message> Broadcast::Parse(PerfectLink::Id sender_id, const std::vector<char> &bytes) noexcept
+{
     if (bytes.size() < kPacketPrefixSize)
     {
-      return {};
+        return {};
     }
 
     PerfectLink::Id aid;
@@ -71,4 +70,4 @@ std::size_t Broadcast::Serialize(const Broadcast::Message &msg, char *buffer) no
     std::copy(bytes.begin() + kPacketPrefixSize, bytes.end(), std::back_inserter(payload));
 
     return {{{seq, aid}, sender_id, payload}};
-  }
+}

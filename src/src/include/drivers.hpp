@@ -30,4 +30,12 @@ namespace drivers
      *
      */
     void FIFOBroadcast(Parser &parser) noexcept;
+
+
+    /**
+     * @brief Responsible for executing
+     * the executing the perfect links algorithm
+     *
+     */
+    void LatticeAgreement(Parser &parser) noexcept;
 } // namespace drivers

@@ -106,7 +106,7 @@ public:
         deliver_thread_ = std::thread(&UniformReliableBroadcast::DeliverPending, this);
     }
 
-    void Add(std::unique_ptr<PerfectLink> pl) noexcept;
+    void Add(std::unique_ptr<PerfectLink> pl) noexcept override;
 
     void Send(const std::string &msg) noexcept;
 

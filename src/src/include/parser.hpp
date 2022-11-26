@@ -45,9 +45,18 @@ private:
 
   std::vector<Host> hosts_;
 
+  // Used in PerfectLinks and FIFO modes
   unsigned id_{};
-  unsigned receiver_id_{};
   unsigned n_messages_to_send_{};
+
+  // Used in PerfectLinks mode
+  unsigned receiver_id_{};
+
+  // Used in Lattice mode
+  unsigned lattice_p_{};
+  unsigned lattice_vs_{};
+  unsigned lattice_ds_{};
+  std::vector<std::vector<unsigned>> lattice_proposals_;
 
   ExecMode exec_mode_{kLatticeAgreement};
 
@@ -67,6 +76,10 @@ public:
   [[nodiscard]] ExecMode exec_mode() const noexcept;
   [[nodiscard]] Host local_host() const;
   [[nodiscard]] Host target_host() const;
+  [[nodiscard]] unsigned lattice_p() const;
+  [[nodiscard]] unsigned lattice_vs() const;
+  [[nodiscard]] unsigned lattice_ds() const;
+  [[nodiscard]] std::vector<std::vector<unsigned>> lattice_proposals() const;
 
 private:
   void CheckParsed() const;

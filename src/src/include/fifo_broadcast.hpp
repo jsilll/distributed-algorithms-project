@@ -81,5 +81,5 @@ protected:
      * @param id
      * @param log
      */
-    void DeliverInternal(const Broadcast::Message::Id &id, bool log = false) noexcept;
+    void DeliverInternal(const Broadcast::Message::Id &id, bool log = false) noexcept override;
 };
