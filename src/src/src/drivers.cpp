@@ -250,6 +250,16 @@ void drivers::LatticeAgreement(Parser &parser) noexcept
         }
     }
 
+    std::size_t max_receive_size = (lattice_ds * sizeof(unsigned int)) +
+                                   PerfectLink::kPacketPrefixSize +
+                                   Broadcast::kPacketPrefixSize +
+                                   LatticeAgreement::kPacketPrefixSize;
+
+#ifdef DEBUG
+    std::cout << "[DBUG] Setting max_receive_size = " << max_receive_size << std::endl;
+#endif
+
+    server.value().max_receive_size(max_receive_size);
     server.value().Start();
     lattice->Start();
 

@@ -7,6 +7,10 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
+#ifdef DEBUG
+#include <iostream>
+#endif
+
 UDPClient::UDPClient()
     : sockfd_(socket(AF_INET, SOCK_DGRAM, 0)), sock_owner_(true)
 {
@@ -35,7 +39,11 @@ UDPClient::~UDPClient() noexcept
 
 ssize_t UDPClient::Send(const std::vector<char> &bytes, sockaddr_in to_addr) const
 {
-    ssize_t res = sendto(sockfd_, reinterpret_cast<const char*>(bytes.data()), bytes.size(), 0, reinterpret_cast<struct sockaddr *>(&to_addr), sizeof(to_addr));
+#ifdef DEBUG
+    std::cout << "[DBUG] UDPClient Sent message of size: " << bytes.size() << std::endl;
+#endif
+
+    ssize_t res = sendto(sockfd_, bytes.data(), bytes.size(), 0, reinterpret_cast<struct sockaddr *>(&to_addr), sizeof(to_addr));
 
     if (res < 0)
     {

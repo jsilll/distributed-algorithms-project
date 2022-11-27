@@ -28,8 +28,10 @@ public:
 protected:
     void SendInternal(const Broadcast::Message &msg) noexcept override;
 
+    void SendDirectedInternal(const Broadcast::Message &msg, PerfectLink::Id target) noexcept;
+
     void NotifyInternal(const Broadcast::Message &msg) noexcept override;
-    
+
     inline void DeliverInternal(const Broadcast::Message::Id &id, bool log = false) noexcept override
     {
         if (log)

@@ -64,15 +64,14 @@ public:
         virtual void Notify(const std::vector<char> &bytes) = 0;
     };
 
-    static constexpr size_t kMaxSendSize = UDP_SERVER_MAX_MSG_SIZE;
+    static constexpr std::size_t kMaxSendSize = UDP_SERVER_MAX_MSG_SIZE;
 
 private:
     int sockfd_;
     sockaddr_in server_addr_;
     std::atomic_bool on_{false};
-
     std::thread receive_thread_;
-
+    std::size_t max_receive_size_{256};
     Shared<std::unordered_map<Machine, std::vector<Observer *>>> observers_;
 
 public:
@@ -86,7 +85,15 @@ public:
 
     void Attach(Observer *obs, sockaddr_in addr) noexcept;
 
-    [[nodiscard]] int sockfd() const noexcept;
+    [[nodiscard]] inline int sockfd() const noexcept
+    {
+        return sockfd_;
+    }
+
+    inline void max_receive_size(std::size_t size) noexcept
+    {
+        max_receive_size_ = size;
+    }
 
 private:
     void Receive() noexcept;

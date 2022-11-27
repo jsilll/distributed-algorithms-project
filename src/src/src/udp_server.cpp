@@ -45,12 +45,20 @@ void UDPServer::Receive() noexcept
 {
     while (on_.load())
     {
+#ifdef UDP_SEVER_OPTIMIZED
         char buffer[kMaxSendSize];
+#else
+        auto buffer_unique = std::make_unique<char[]>(max_receive_size_);
+        auto buffer = buffer_unique.get();
+#endif
         sockaddr_in addr{};
         socklen_t addr_len = sizeof(addr);
-        ssize_t len = recvfrom(sockfd_, buffer, sizeof(buffer), 0, reinterpret_cast<sockaddr *>(&addr), &addr_len);
+        ssize_t len = recvfrom(sockfd_, buffer, max_receive_size_, 0, reinterpret_cast<sockaddr *>(&addr), &addr_len);
         if (len > 0)
         {
+#ifdef DEBUG
+            std::cout << "[DBUG] UDPServer Received message with size: " << len << std::endl;
+#endif
             std::vector<char> payload;
             payload.reserve(addr_len);
             std::copy(buffer, buffer + len, std::back_inserter(payload));
@@ -75,9 +83,4 @@ void UDPServer::NotifyAll(const std::vector<char> &bytes, sockaddr_in addr)
     {
         obs->Notify(bytes);
     }
-}
-
-int UDPServer::sockfd() const noexcept
-{
-    return sockfd_;
 }

@@ -36,7 +36,7 @@ public:
     std::vector<char> payload;
   };
 
-protected:
+public:
   static constexpr size_t kPacketPrefixSize = sizeof(PerfectLink::Id) + sizeof(Message::Id::Seq);
 
 protected:

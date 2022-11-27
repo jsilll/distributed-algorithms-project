@@ -14,6 +14,7 @@ src/broadcast.cpp
 src/best_effort_broadcast.cpp
 src/fifo_broadcast.cpp
 src/uniform_reliable_broadcast.cpp
+src/lattice_agreement.cpp
 )
 
 # DO NOT EDIT THE FOLLOWING LINE

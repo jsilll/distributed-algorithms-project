@@ -19,19 +19,40 @@ void BestEffortBroadcast::SendInternal(const Broadcast::Message &msg) noexcept
     std::vector<char> buffer(kPacketPrefixSize + msg.payload.size());
     std::size_t len = Serialize(msg, buffer);
 
-    assert(len == buffer.size());
-
 #ifdef DEBUG
     if (msg.id.author == id_)
     {
-        std::cout << "[DBUG] Best Effort Broadcast sending message " << msg.id.seq << " of size: " << len << "\n";
+        std::cout << "[DBUG] Best Effort Broadcast sending message of size: " << msg.payload.size() << "\n";
     }
 #endif
 
     for (const auto pl : pls)
     {
-        pl->Send(std::move(buffer));
+        pl->Send(buffer);
     }
+}
+
+void BestEffortBroadcast::SendDirectedInternal(const Broadcast::Message &msg, PerfectLink::Id target) noexcept
+{
+    static_assert(UDPServer::kMaxSendSize > PerfectLink::kPacketPrefixSize);
+    static_assert((UDPServer::kMaxSendSize - PerfectLink::kPacketPrefixSize) > kPacketPrefixSize);
+
+    std::vector<char> buffer(kPacketPrefixSize + msg.payload.size());
+    std::size_t len = Serialize(msg, buffer);
+
+#ifdef DEBUG
+    if (msg.id.author == id_)
+    {
+        std::cout << "[DBUG] Best Effort Broadcast sending directed message to " << target << " of size: " << msg.payload.size() << "\n";
+    }
+#endif
+
+    perfect_links_.mutex.lock_shared();
+    if (perfect_links_.data.count(target))
+    {
+        perfect_links_.data.at(target)->Send(buffer);
+    }
+    perfect_links_.mutex.lock_shared();
 }
 
 void BestEffortBroadcast::NotifyInternal(const Broadcast::Message &msg) noexcept

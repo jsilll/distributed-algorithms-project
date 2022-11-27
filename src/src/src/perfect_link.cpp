@@ -134,13 +134,12 @@ PerfectLink::Message::Seq PerfectLink::Send(const std::vector<char> payload) noe
   Message::Seq id = n_messages_sent_.fetch_add(1);
 
 #ifdef DEBUG
-  std::cout << "[DBUG] PerfectLink sending Raw Message of size (no metadata): " << payload.size() << "\n";
+  std::cout << "[DBUG] PerfectLink sending Message of size: " << payload.size() << "\n";
 #endif
 
   messages_to_send_.mutex.lock();
   messages_to_send_.data.insert({id, std::move(payload)});
   messages_to_send_.mutex.unlock();
-
 
   return id;
 }
@@ -355,7 +354,7 @@ std::optional<std::variant<PerfectLink::Message, PerfectLink::Ack>> PerfectLink:
     std::copy(bytes.begin() + kPacketPrefixSize, bytes.end(), std::back_inserter(payload));
 
 #ifdef DEBUG
-    std::cout << "[DBUG] PerfectLink received a message with id " << id << " and payload size: " << payload.size() << "\n";
+    std::cout << "[DBUG] PerfectLink received a message with id " << id << " raw size: " << bytes.size() << " payload size: " << payload.size() << "\n";
 #endif
 
     return Message{id, payload};
