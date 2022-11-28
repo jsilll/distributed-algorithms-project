@@ -5,7 +5,7 @@
 
 void LatticeAgreement::Propose(const std::vector<unsigned int> &proposed) noexcept
 {
-    std::unordered_set porposal_set(proposed.begin(), proposed.end());
+    std::unordered_set<unsigned int>proposal_set(proposed.begin(), proposed.end());
 
     current_proposal_state_.mutex.lock_shared();
     bool is_active = current_proposal_state_.data.active;
@@ -14,13 +14,13 @@ void LatticeAgreement::Propose(const std::vector<unsigned int> &proposed) noexce
     if (is_active)
     {
         to_propose_.mutex.lock();
-        to_propose_.data.push(std::move(porposal_set));
+        to_propose_.data.push(std::move(proposal_set));
         to_propose_.mutex.unlock();
     }
     else
     {
         current_proposal_state_.mutex.lock();
-        current_proposal_state_.data = {{0, std::move(porposal_set)}, true, 0, 0, {}};
+        current_proposal_state_.data = {{0, std::move(proposal_set)}, true, 0, 0, {}};
         std::vector<char> buffer(kPacketPrefixSize + (proposed.size() * sizeof(unsigned int)));
         std::size_t size = Serialize(Message::Type::kProposal, current_round_.load(), current_proposal_state_.data.proposal.number, current_proposal_state_.data.proposal.values, buffer);
 
