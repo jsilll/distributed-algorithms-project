@@ -20,12 +20,21 @@ void LatticeAgreement::Propose(const std::vector<unsigned int> &proposed) noexce
     else
     {
         current_proposal_state_.mutex.lock();
-
-        Proposal::Number new_proposal_number = current_proposal_state_.data.active_proposal_number + 1;
-        current_proposal_state_.data = {true, 0, 0, new_proposal_number, std::move(porposal_set)};
-
+        current_proposal_state_.data = {true, 0, 0, 0, std::move(porposal_set)};
         std::vector<char> buffer(kPacketPrefixSize + (proposed.size() * sizeof(unsigned int)));
-        std::size_t size = Serialize(Message::Type::kProposal, round_.load(), new_proposal_number, current_proposal_state_.data.proposed, buffer);
+        std::size_t size = Serialize(Message::Type::kProposal, round_.load(), current_proposal_state_.data.active_proposal_number, current_proposal_state_.data.proposed, buffer);
+
+#ifdef DEBUG
+        std::cout << "[DBUG] LatticeAgreement Received Message of type = " << static_cast<int>(Message::Type::kProposal)
+                  << ", round = " << round_.load()
+                  << ", active_proposal_number = " << current_proposal_state_.data.active_proposal_number
+                  << ", proposal = ";
+        for (const auto n : current_proposal_state_.data.proposed)
+        {
+            std::cout << n << " ";
+        }
+        std::cout << std::endl;
+#endif
 
         current_proposal_state_.mutex.unlock();
 
@@ -41,44 +50,47 @@ void LatticeAgreement::NotifyInternal(const Broadcast::Message &msg) noexcept
 
     if (message.has_value())
     {
+        auto message_val = message.value();
+
 #ifdef DEBUG
-        std::cout << "[DBUG] LatticeAgreement received message of type = " << static_cast<int>(message.value().type)
-                  << ", id = " << message.value().proposal.number
+        std::cout << "[DBUG] LatticeAgreement Received Message of type = " << static_cast<int>(message_val.type)
+                  << ", number = " << message_val.proposal.number
                   << ", proposal = ";
-        for (const auto n : message.value().proposal.values)
+        for (const auto n : message_val.proposal.values)
         {
             std::cout << n << " ";
         }
         std::cout << std::endl;
 #endif
+
+        std::optional<Broadcast::Message> res{};
+
         current_proposal_state_.mutex.lock();
-        auto res = HandleMessage(message.value());
+        auto round = round_.load();
+        if (message_val.round == round)
+        {
+            res = HandleMessage(message_val, current_proposal_state_.data);
+        }
+        else if (message_val.round > round)
+        {
+            ahead_of_time_messages_[message_val.round].push({msg.id.author, message_val});
+        }
         current_proposal_state_.mutex.unlock();
+
+        if (message_val.round < round)
+        {
+#ifdef DEBUG
+            std::cerr << "[DBUG] LatticeAgreement Handling old message\n";
+#endif
+            agreed_proposals_.mutex.lock();
+            res = HandleMessage(message_val, agreed_proposals_.data[message_val.round]);
+            agreed_proposals_.mutex.unlock();
+        }
 
         if (res.has_value())
         {
             SendDirectedInternal(res.value(), msg.id.author);
         }
-
-#ifdef DEBUG
-        current_proposal_state_.mutex.lock_shared();
-        std::cout << "[DBUG] LatticeAgreement Current Proposal State active = " << current_proposal_state_.data.active
-                  << " ack_count = " << current_proposal_state_.data.ack_count
-                  << " nack_count = " << current_proposal_state_.data.nack_count
-                  << " id = " << current_proposal_state_.data.active_proposal_number
-                  << " proposed = ";
-        for (const auto n : current_proposal_state_.data.proposed)
-        {
-            std::cout << n << " ";
-        }
-        std::cout << "accepted = ";
-        for (const auto n : current_proposal_state_.data.accepted)
-        {
-            std::cout << n << " ";
-        }
-        std::cout << "\n";
-        current_proposal_state_.mutex.unlock_shared();
-#endif
     }
     else
     {
@@ -88,31 +100,26 @@ void LatticeAgreement::NotifyInternal(const Broadcast::Message &msg) noexcept
     }
 }
 
-std::optional<Broadcast::Message> LatticeAgreement::HandleMessage(const LatticeAgreement::Message &msg) noexcept
+std::optional<Broadcast::Message> LatticeAgreement::HandleMessage(const LatticeAgreement::Message &msg, LatticeAgreement::ProposalState &proposal_state) noexcept
 {
-    if (msg.round != round_.load())
+    if (msg.type == Message::Type::kAck && proposal_state.active_proposal_number == msg.proposal.number)
     {
-        // TODO: save it in a queue like data structure
+        proposal_state.ack_count++;
     }
-
-    if (msg.type == Message::Type::kAck && current_proposal_state_.data.active_proposal_number == msg.proposal.number)
-    {
-        current_proposal_state_.data.ack_count++;
-    }
-    else if (msg.type == Message::Type::kNack && current_proposal_state_.data.active_proposal_number == msg.proposal.number)
+    else if (msg.type == Message::Type::kNack && proposal_state.active_proposal_number == msg.proposal.number)
     {
         for (const auto val : msg.proposal.values)
         {
-            current_proposal_state_.data.proposed.insert(val);
+            proposal_state.proposed.insert(val);
         }
 
-        current_proposal_state_.data.nack_count++;
+        proposal_state.nack_count++;
     }
     else if (msg.type == Message::Type::kProposal)
     {
         bool accepted_in_proposed{true};
 
-        for (const auto val : current_proposal_state_.data.accepted)
+        for (const auto val : proposal_state.accepted)
         {
             if (msg.proposal.values.count(val) == 0)
             {
@@ -123,13 +130,13 @@ std::optional<Broadcast::Message> LatticeAgreement::HandleMessage(const LatticeA
 
         for (const auto val : msg.proposal.values)
         {
-            current_proposal_state_.data.accepted.insert(val);
+            proposal_state.accepted.insert(val);
         }
 
         if (accepted_in_proposed)
         {
             std::vector<char> buffer(kPacketPrefixSize);
-            std::size_t size = Serialize(Message::Type::kAck, round_.load(), msg.proposal.number, {}, buffer);
+            std::size_t size = Serialize(Message::Type::kAck, msg.round, msg.proposal.number, {}, buffer);
 
             Broadcast::Message::Id::Seq seq = n_messages_sent_.fetch_add(1);
             Broadcast::Message message = {{seq, id_}, id_, std::move(buffer)};
@@ -137,8 +144,8 @@ std::optional<Broadcast::Message> LatticeAgreement::HandleMessage(const LatticeA
         }
         else
         {
-            std::vector<char> buffer(kPacketPrefixSize + (current_proposal_state_.data.accepted.size() * sizeof(unsigned int)));
-            std::size_t size = Serialize(Message::Type::kNack, round_.load(), msg.proposal.number, current_proposal_state_.data.accepted, buffer);
+            std::vector<char> buffer(kPacketPrefixSize + (proposal_state.accepted.size() * sizeof(unsigned int)));
+            std::size_t size = Serialize(Message::Type::kNack, msg.round, msg.proposal.number, proposal_state.accepted, buffer);
 
             Broadcast::Message::Id::Seq seq = n_messages_sent_.fetch_add(1);
             Broadcast::Message message = {{seq, id_}, id_, std::move(buffer)};
@@ -166,7 +173,7 @@ void LatticeAgreement::CheckForAgreement() noexcept
     while (on_.load())
     {
         current_proposal_state_.mutex.lock_shared();
-        bool decide = current_proposal_state_.data.ack_count > std::floor(n_processes_.load() / 2) &&
+        bool decide = (current_proposal_state_.data.ack_count + 1) > std::floor(n_processes_.load() / 2) &&
                       current_proposal_state_.data.active;
         bool reset_and_broadcast = current_proposal_state_.data.nack_count > 0 &&
                                    current_proposal_state_.data.ack_count + current_proposal_state_.data.nack_count > std::floor(n_processes_.load() / 2) &&
@@ -176,21 +183,63 @@ void LatticeAgreement::CheckForAgreement() noexcept
         if (decide)
         {
 #ifdef DEBUG
-            std::cout << "[DBUG] LatticeAgreements Deciding" << std::endl;
+            std::cout << "[DBUG] LatticeAgreement Deciding" << std::endl;
 #endif
+            to_propose_.mutex.lock();
+            bool has_new_proposal_to_make = !to_propose_.data.empty();
+            auto new_proposal = to_propose_.data.front();
+            if (has_new_proposal_to_make)
+            {
+                to_propose_.data.pop();
+            }
+            to_propose_.mutex.unlock();
+
+            std::vector<char> buffer;
             current_proposal_state_.mutex.lock();
+            auto round = round_.fetch_add(1) + 1;
             current_proposal_state_.data.active = false;
-            auto proposed = current_proposal_state_.data.proposed;
-            // increment round
-            // reset current_proposal_state_ and load with queue.front() and queue.pop()
-            // HandleMessage for all the queued messages that were ahead of time
+            auto proposal_state_copy = current_proposal_state_.data;
+            if (has_new_proposal_to_make)
+            {
+                current_proposal_state_.data = {true, 0, 0, 0, std::move(new_proposal)};
+                buffer.resize(kPacketPrefixSize + (current_proposal_state_.data.proposed.size() * sizeof(unsigned int)));
+                std::size_t size = Serialize(Message::Type::kProposal, round, 0, current_proposal_state_.data.proposed, buffer);
+            }
+            auto q = ahead_of_time_messages_[round];
+            ahead_of_time_messages_.erase(round);
             current_proposal_state_.mutex.unlock();
-            Decide(proposed);
+
+            if (has_new_proposal_to_make)
+            {
+                Broadcast::Message::Id::Seq seq = n_messages_sent_.fetch_add(1);
+                Broadcast::Message message = {{seq, id_}, id_, std::move(buffer)};
+                SendInternal(message);
+            }
+
+            while (!q.empty())
+            {
+                auto pair = q.front();
+                auto author = pair.first;
+                auto msg = pair.second;
+                q.pop();
+
+                auto res = HandleMessage(msg, current_proposal_state_.data);
+                if (res.has_value())
+                {
+                    SendDirectedInternal(res.value(), author);
+                }
+            }
+
+            agreed_proposals_.mutex.lock();
+            agreed_proposals_.data.push_back(proposal_state_copy);
+            agreed_proposals_.mutex.unlock();
+
+            Decide(proposal_state_copy.proposed);
         }
         else if (reset_and_broadcast)
         {
 #ifdef DEBUG
-            std::cout << "[DBUG] LatticeAgreements Resetting and Broadcasting" << std::endl;
+            std::cout << "[DBUG] LatticeAgreement Resetting and Broadcasting" << std::endl;
 #endif
             current_proposal_state_.mutex.lock();
 
@@ -212,11 +261,11 @@ void LatticeAgreement::CheckForAgreement() noexcept
     }
 }
 
-std::size_t LatticeAgreement::Serialize(Message::Type type, unsigned int round, Proposal::Number id, const std::unordered_set<unsigned int> &proposed, std::vector<char> &buffer) noexcept
+std::size_t LatticeAgreement::Serialize(Message::Type type, unsigned int round, Proposal::Number number, const std::unordered_set<unsigned int> &proposed, std::vector<char> &buffer) noexcept
 {
     auto type_ptr = static_cast<const char *>(static_cast<const void *>(&type));
     auto round_ptr = static_cast<const char *>(static_cast<const void *>(&round));
-    auto active_proposal_number_ptr = static_cast<const char *>(static_cast<const void *>(&id));
+    auto active_proposal_number_ptr = static_cast<const char *>(static_cast<const void *>(&number));
 
     std::copy(type_ptr, type_ptr + sizeof(Message::Type), buffer.begin());
     std::copy(round_ptr, round_ptr + sizeof(unsigned int), buffer.begin() + sizeof(Message::Type));
