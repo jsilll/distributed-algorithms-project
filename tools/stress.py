@@ -129,6 +129,9 @@ class Validation:
 
         return (hostsfile, configfile)
 
+    def generateLatticeConfig(self, directory):
+        exit(1)
+
 class StressTest:
     def __init__(self, procs, concurrency, attempts, attemptsRatio):
         self.processes = len(procs)
@@ -266,6 +269,8 @@ def main(processes, messages, runscript, testType, logsDir, testConfig):
         hostsFile, configFile = validation.generateFifoConfig(logsDir)
     elif testType == "lcausal":
         hostsFile, configFile = validation.generateLcausalConfig(logsDir)
+    elif testType == "lattice":
+        hostsFile, configFile = validation.generateLatticeConfig(logsDir)
     else:
         raise ValueError('Unrecognised test type')
 
@@ -326,7 +331,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-t",
         "--test",
-        choices=["perfect", "fifo", "lcausal"],
+        choices=["perfect", "fifo", "lcausal", "lattice"],
         required=True,
         dest="testType",
         help="Which test to run",

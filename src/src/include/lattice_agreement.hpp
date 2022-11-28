@@ -11,6 +11,7 @@ private:
   struct Proposal
   {
     typedef unsigned int Number;
+    
     Number number;
     std::unordered_set<unsigned int> values;
   };
@@ -22,18 +23,19 @@ private:
       kProposal,
       kAck,
       kNack,
-    } type;
+    };
+
+    Type type;
     Proposal proposal;
     unsigned int round;
   };
 
   struct ProposalState
   {
+    Proposal proposal;
     bool active{false};
     unsigned int ack_count{0};
     unsigned int nack_count{0};
-    Proposal::Number active_proposal_number{0};
-    std::unordered_set<unsigned int> proposed{};
     std::unordered_set<unsigned int> accepted{};
   };
 
@@ -41,11 +43,12 @@ public:
   static constexpr int kPacketPrefixSize = sizeof(Message::Type) + sizeof(unsigned int) + sizeof(Proposal::Number);
 
 private:
-  std::atomic_uint round_{0};
+  std::atomic_uint current_round_{0};
   Shared<ProposalState> current_proposal_state_{};
+  std::unordered_map<unsigned int, std::queue<std::pair<PerfectLink::Id, Message>>> ahead_of_time_messages_{};
+
   Shared<std::vector<ProposalState>> agreed_proposals_{};
   Shared<std::queue<std::unordered_set<unsigned int>>> to_propose_{};
-  std::unordered_map<unsigned int, std::queue<std::pair<PerfectLink::Id, Message>>> ahead_of_time_messages_{};
 
   std::thread agreement_checker_thread_;
 
