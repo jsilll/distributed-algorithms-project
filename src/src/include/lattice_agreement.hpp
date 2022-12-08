@@ -11,7 +11,7 @@ private:
   struct Proposal
   {
     typedef unsigned int Number;
-    
+
     Number number;
     std::unordered_set<unsigned int> values;
   };
@@ -34,21 +34,21 @@ private:
   {
     Proposal proposal;
     bool active{false};
-    unsigned int ack_count{0};
+    unsigned int ack_count{1};
     unsigned int nack_count{0};
-    std::unordered_set<unsigned int> accepted{};
+    std::unordered_set<unsigned int> accepted{proposal.values};
   };
 
 public:
-  static constexpr int kPacketPrefixSize = sizeof(Message::Type) + sizeof(unsigned int) + sizeof(Proposal::Number);
-
+  static constexpr int kPacketPrefixSize = sizeof(Message::Type) +
+                                           sizeof(unsigned int) +
+                                           sizeof(Proposal::Number);
 private:
   std::atomic_uint current_round_{0};
   Shared<ProposalState> current_proposal_state_{};
-  std::unordered_map<unsigned int, std::queue<std::pair<PerfectLink::Id, Message>>> ahead_of_time_messages_{};
-
-  Shared<std::vector<ProposalState>> agreed_proposals_{};
   Shared<std::queue<std::unordered_set<unsigned int>>> to_propose_{};
+  Shared<std::unordered_map<unsigned int, ProposalState>> agreed_proposals_{};
+  Shared<std::unordered_map<unsigned int, std::queue<std::pair<PerfectLink::Id, Message>>>> ahead_of_time_messages_{};
 
   std::thread agreement_checker_thread_;
 
@@ -87,7 +87,12 @@ private:
 
   static std::optional<Message> Parse(const std::vector<char> &bytes) noexcept;
 
-  std::optional<Broadcast::Message> HandleMessage(const Message &msg, ProposalState &proposal_state) noexcept;
+  std::optional<Broadcast::Message> HandleMessage(const Message &msg,
+                                                  ProposalState &proposal_state) noexcept;
 
-  static std::size_t Serialize(Message::Type type, unsigned int round, Proposal::Number number, const std::unordered_set<unsigned int> &proposed, std::vector<char> &buffer) noexcept;
+  static std::size_t Serialize(Message::Type type,
+                               unsigned int round,
+                               Proposal::Number number,
+                               const std::unordered_set<unsigned int> &proposed,
+                               std::vector<char> &buffer) noexcept;
 };
