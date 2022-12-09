@@ -52,7 +52,7 @@ void BestEffortBroadcast::SendDirectedInternal(const Broadcast::Message &msg, Pe
     {
         perfect_links_.data.at(target)->Send(buffer);
     }
-    perfect_links_.mutex.lock_shared();
+    perfect_links_.mutex.unlock_shared();
 }
 
 void BestEffortBroadcast::NotifyInternal(const Broadcast::Message &msg) noexcept
