@@ -294,17 +294,6 @@ void LatticeAgreement::CheckForAgreement() noexcept
             ahead_of_time_messages_.data.erase(round);
             ahead_of_time_messages_.mutex.unlock();
 
-            current_proposal_state_.mutex.lock_shared();
-            if (has_new_proposal_to_make)
-            {
-                std::vector<char> buffer(kPacketPrefixSize + (current_proposal_state_.data.proposal.values.size() * sizeof(unsigned int)));
-                std::size_t size = Serialize(Message::Type::kProposal, round, current_proposal_state_.data.proposal.number, current_proposal_state_.data.proposal.values, buffer);
-                Broadcast::Message::Id::Seq seq = n_messages_sent_.fetch_add(1);
-                Broadcast::Message message = {{seq, id_}, id_, std::move(buffer)};
-                SendInternal(message);
-            }
-            current_proposal_state_.mutex.unlock_shared();
-
             while (!q.empty())
             {
                 auto [author, msg] = q.front();
@@ -332,6 +321,17 @@ void LatticeAgreement::CheckForAgreement() noexcept
                     SendDirectedInternal(res.value(), author);
                 }
             }
+
+            current_proposal_state_.mutex.lock_shared();
+            if (has_new_proposal_to_make)
+            {
+                std::vector<char> buffer(kPacketPrefixSize + (current_proposal_state_.data.proposal.values.size() * sizeof(unsigned int)));
+                std::size_t size = Serialize(Message::Type::kProposal, round, current_proposal_state_.data.proposal.number, current_proposal_state_.data.proposal.values, buffer);
+                Broadcast::Message::Id::Seq seq = n_messages_sent_.fetch_add(1);
+                Broadcast::Message message = {{seq, id_}, id_, std::move(buffer)};
+                SendInternal(message);
+            }
+            current_proposal_state_.mutex.unlock_shared();
 
             if (proposal_state_copy.ack_count < n_processes_.load())
             {
