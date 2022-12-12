@@ -43,6 +43,7 @@ public:
   static constexpr int kPacketPrefixSize = sizeof(Message::Type) +
                                            sizeof(unsigned int) +
                                            sizeof(Proposal::Number);
+
 private:
   std::atomic_uint current_round_{0};
   Shared<ProposalState> current_proposal_state_{};
@@ -81,18 +82,17 @@ public:
   void NotifyInternal(const Broadcast::Message &msg) noexcept override;
 
 private:
+  void GarbageCollect() noexcept;
+
   void CheckForAgreement() noexcept;
 
   void Decide(std::unordered_set<unsigned int> &values) noexcept;
 
+  void HandleAheadOfTimeMessages(unsigned int round) noexcept;
+
+  std::optional<Broadcast::Message> HandleMessage(const Message &msg, ProposalState &proposal_state) noexcept;
+
   static std::optional<Message> Parse(const std::vector<char> &bytes) noexcept;
 
-  std::optional<Broadcast::Message> HandleMessage(const Message &msg,
-                                                  ProposalState &proposal_state) noexcept;
-
-  static std::size_t Serialize(Message::Type type,
-                               unsigned int round,
-                               Proposal::Number number,
-                               const std::unordered_set<unsigned int> &proposed,
-                               std::vector<char> &buffer) noexcept;
+  static std::size_t Serialize(Message::Type type, unsigned int round, Proposal::Number number, const std::unordered_set<unsigned int> &proposed, std::vector<char> &buffer) noexcept;
 };
