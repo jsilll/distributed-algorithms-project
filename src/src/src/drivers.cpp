@@ -56,7 +56,7 @@ void drivers::PerfectLinks(Parser &parser) noexcept
 
     try
     {
-        logger.emplace(parser.output_path(), false);
+        logger.emplace(parser.output_path());
         server.emplace(local_host.ip, local_host.port);
         client.emplace(server.value().sockfd());
         manager = std::make_unique<PerfectLink::BasicManager>(logger.value());

@@ -1,5 +1,15 @@
 import argparse
+from math import factorial
 from itertools import combinations
+
+def get_all_file_names(log : str, procs : int) -> tuple[list, list]:
+    if log[-1] == "/":
+        log = log[:-1]
+    config = list(); output = list()
+    for i in range(1, procs + 1):
+        config.append(f"{log}/proc{i:02d}.config")
+        output.append(f"{log}/proc{i:02d}.output")
+    return config, output
 
 def get_possible(configs : list) -> set:
     possible = set()
@@ -53,28 +63,34 @@ def check_out_out(output1 : str, output2 : str) -> bool:
 def main():
     # parse command line arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', nargs='+', required=True)
-    parser.add_argument('--output', nargs='+', required=True)
+    parser.add_argument('--log', required=True, type=str)
+    parser.add_argument('--procs', required=True, type=int)
     args = parser.parse_args()
 
+    # get all file names
+    configs, outputs = get_all_file_names(args.log, args.procs)
+
     # 1. checking each config file against each output file
-    for config, output in zip(args.config, args.output):
-        print("Checking {} against {}".format(config, output))
+    total = len(configs)
+    for idx, (config, output) in enumerate(zip(configs, outputs)):
+        print(f"Checking {config} against {output}. {idx + 1}/{total}")
         if  not check_conf_out(config, output):
             print("Validation failed!")
             exit(1)
 
     # 2. checking each output file against the set of possible values
-    possible = get_possible(args.config)
-    for output in args.output:
-        print("Checking {} against possible values".format(output))
+    total = len(outputs)
+    possible = get_possible(configs)
+    for idx, output in enumerate(outputs):
+        print(f"Checking {output} against possible values. {idx + 1}/{total}")
         if not check_out_possible(output, possible):
             print("Validation failed!")
             exit(1)
 
     # 3. checking each output file against each other
-    for output1, output2 in combinations(args.output, 2):
-        print("Checking {} against {}".format(output1, output2))
+    total = int(factorial(len(outputs)) / (factorial(2) * factorial(len(outputs) - 2)))
+    for idx, (output1, output2) in enumerate(combinations(outputs, 2)):
+        print(f"Checking {output1} against {output2}. {idx + 1}/{total}")
         if not check_out_out(output1, output2):
             print("Validation failed!")
             exit(1)
