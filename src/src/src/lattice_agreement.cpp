@@ -186,7 +186,7 @@ std::optional<Broadcast::Message> LatticeAgreement::HandleMessage(const LatticeA
 #ifdef DEBUG
         std::cout << "[DBUG] LatticeAgreement Handling Ack: " << proposal_state.ack_count << "\n";
 #endif
-        proposal_state.ack_count++;
+        ++proposal_state.ack_count;
     }
     else if (msg.type == Message::Type::kNack && proposal_state.proposal.number == msg.proposal.number)
     {
@@ -369,7 +369,6 @@ void LatticeAgreement::CheckForAgreement() noexcept
 
             current_proposal_state_.data.ack_count = 1;
             current_proposal_state_.data.nack_count = 0;
-
             ++current_proposal_state_.data.proposal.number;
 
             std::vector<char> buffer(kPacketPrefixSize + (current_proposal_state_.data.proposal.values.size() * sizeof(unsigned int)));

@@ -1,9 +1,9 @@
 #pragma once
 
+#include <queue>
+
 #include "logger.hpp"
 #include "best_effort_broadcast.hpp"
-
-#include <queue>
 
 class LatticeAgreement final : public BestEffortBroadcast
 {
