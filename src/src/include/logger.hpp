@@ -26,9 +26,10 @@ public:
 
     inline friend Logger &operator<<(Logger &logger, const std::string &text) noexcept
     {
-        logger.file_ << text << std::endl;
+        std::string text_w_nl = text + "\n";
+        logger.file_ << text_w_nl;
 #ifdef DEBUG
-        std::cout << "[DLOG] " << text << "\n";
+        std::cout << "[DLOG] " << text_w_nl;
 #endif
         return logger;
     }
